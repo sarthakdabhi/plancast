@@ -1,0 +1,54 @@
+{
+  "name": "plancast",
+  "version": "0.1.0",
+  "description": "Fact-faithful two-host audio briefings from Markdown plans",
+  "type": "module",
+  "bin": {
+    "plancast": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "docs/VALIDATION.md",
+    "runtime"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "license": "MIT",
+  "scripts": {
+    "build": "rm -rf dist && tsc && chmod +x dist/cli.js",
+    "dev": "tsx src/cli.ts",
+    "test": "vitest run",
+    "check": "npm run build && npm run lint && npm test",
+    "lint": "eslint src test",
+    "format": "prettier --write src test",
+    "prepack": "npm run build",
+    "package:standalone": "npm run build && node scripts/package-standalone.mjs"
+  },
+  "dependencies": {
+    "commander": "^15.0.0",
+    "openai": "^7.20.0",
+    "remark-gfm": "^4.0.1",
+    "remark-parse": "^11.0.0",
+    "unified": "^11.0.5",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.2",
+    "eslint": "^10.11.0",
+    "prettier": "^3.9.8",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.70.0",
+    "vitest": "^5.0.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sarthakdabhi/plancast.git"
+  },
+  "homepage": "https://github.com/sarthakdabhi/plancast#readme",
+  "bugs": {
+    "url": "https://github.com/sarthakdabhi/plancast/issues"
+  }
+}

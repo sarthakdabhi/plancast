@@ -1,0 +1,16 @@
+node_modules/
+dist/
+coverage/
+.env*
+*.tgz
+*.plancast.m4a
+*.plancast.txt
+*.plancast.json
+.plancast-*/
+
+tmp/
+__pycache__/
+
+releases/
+
+.DS_Store

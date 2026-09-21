@@ -1,0 +1,22 @@
+[
+  {
+    "quote": "### Phase 0 - Feasibility\n\n- Port the existing renderer into a standalone experimental command.\n\n- Generate 2-minute and 5-minute samples from five representative plans.\n\n- Confirm duration, two-voice distinction, M4A compatibility, cost, and factual faithfulness.\n\n\n**Exit criterion:** At least four of five briefings preserve the proposal, risk, and next action with no material unsupported claim.\n\n\n### Phase 1 - MVP\n\n- Deliver FR-001 through FR-003 with explicit provider configuration and manual privacy acknowledgement.\n\n- Add typed manifests, fixture tests, atomic output, and documented installation.\n\n\n**Exit criterion:** A new user can install the command and create a valid M4A from `PLAN.md` in one documented command.\n\n\n### Phase 2 - Useful daily tool\n\n- Deliver FR-004 through FR-008.\n\n- Validate quality on 15-20 representative plans.\n\n- Add npm packaging and evaluate Homebrew distribution.\n\n\n**Exit criterion:** At least 90% decision-critical preservation, 95% successful fixture runs, and duration targets met across the quality set.\n\n\n### Phase 3 - Convenience surfaces\n\n- Deliver FR-009 only after repeated CLI use demonstrates demand.\n\n- Reuse the CLI engine from a Finder Quick Action or minimal native wrapper.\n\n\n**Exit criterion:** The convenience surface introduces no separate generation logic and successfully handles the same fixtures as the CLI.",
+    "startLine": 863,
+    "endLine": 890
+  },
+  {
+    "quote": "### Common pitfalls\n\n- **Audio that is short but unhelpful:** Enforce required content categories before optimizing conversational style.\n\n- **A summary that sounds certain when the plan is tentative:** Preserve qualifiers and explicitly identify unresolved questions.\n\n- **Duration controlled only by TTS speed:** Use a word budget first; excessive speed damages comprehension.\n\n- **Provider output treated as trusted:** Validate every response and never allow it to choose paths or commands.\n\n- **Cache poisoning or stale reuse:** Include all material configuration and prompt versions in the cache key and validate artifact hashes.\n\n- **Misleading success after partial failure:** Success requires complete validated artifacts; playback is the only optional post-success step.\n\n- **Leaking source text through logs:** Log phase, provider, timing, and safe IDs rather than prompts or provider bodies.\n\n- **Overbuilding the native interface:** Validate the command and audio quality before starting SwiftUI work.",
+    "startLine": 841,
+    "endLine": 850
+  },
+  {
+    "quote": "### Build order\n\n1. Initialize TypeScript, linting, formatting, Vitest, and the `plancast` binary entry point.\n2. Implement typed errors, exit codes, configuration resolution, input validation, and `--dry-run`.\n3. Implement Markdown structure extraction, source line mapping, and deterministic cache-key calculation.\n4. Define Zod schemas and TypeScript types for summaries, facts, dialogue turns, manifests, and provider contracts.\n5. Implement the ScriptProvider adapter with prompt-injection boundaries, word budgets, response validation, and bounded retries.\n6. Port the existing two-voice speech renderer behind SpeechProvider and validate turn ordering and chunk limits.\n7. Implement pause insertion, WAV assembly, `afconvert` conversion, `afinfo` validation, and atomic artifact publication.\n8. Add duration correction, cache storage, immediate playback, JSON output, and interruption cleanup.\n9. Build the representative quality fixture suite and run human faithfulness review.\n10. Package the npm binary, write installation documentation, and only then evaluate a Homebrew formula and Finder Quick Action.",
+    "startLine": 733,
+    "endLine": 743
+  },
+  {
+    "quote": "Provider-specific; adapter normalizes `429` into a retryable application error.  \nFallback behavior: Retry transient failures at most twice, then stop before TTS. Never silently switch providers because that changes data handling and output behavior.",
+    "startLine": 613,
+    "endLine": 614
+  }
+]
