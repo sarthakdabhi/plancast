@@ -7,7 +7,7 @@ process.once("SIGINT", stop);
 process.once("SIGTERM", stop);
 const program = new Command()
   .name("plancast")
-  .version("0.3.0")
+  .version("0.4.0")
   .description(
     "Turn documents and public articles into grounded two-host audio briefings",
   )
@@ -55,9 +55,14 @@ program
   .description(
     "Install verified llama.cpp, the selected Qwen model, and Pocket TTS voices",
   )
-  .action(async () => {
-    const { setupLocal } = await import("./providers/setup-local.js");
-    await setupLocal(abort.signal);
+  .option(
+    "--model <id>",
+    "Download and save a writing model: qwen3:4b, qwen3:8b, or qwen3:14b",
+  )
+  .option("--yes", "Skip model selection and use the selected/default model")
+  .action(async (options: { model?: string; yes?: boolean }) => {
+    const { setupLocal } = await import("./commands/setup-local.js");
+    await setupLocal(options, abort.signal);
   });
 program
   .command("models")
@@ -81,7 +86,7 @@ program
       );
     }
     process.stdout.write(
-      "Download: PLANCAST_LOCAL_SCRIPT_MODEL=qwen3:8b plancast setup-local\nUse the same variable when generating.\n",
+      "Choose and save: plancast setup-local\nWithout a prompt: plancast setup-local --model qwen3:8b\nPLANCAST_LOCAL_SCRIPT_MODEL overrides the saved choice.\n",
     );
   });
 program

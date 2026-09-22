@@ -63,17 +63,17 @@ Or install directly without Homebrew:
 
 The standalone Apple Silicon archive includes its own **Node.js 24.21.0** runtime. You do not need Homebrew, npm, Node, uv, Python, FFmpeg, Ollama, or LM Studio installed separately.
 
-Download the archive and checksum from [GitHub Releases](https://github.com/sarthakdabhi/plancast/releases/tag/v0.3.0), then run:
+Download the archive and checksum from [GitHub Releases](https://github.com/sarthakdabhi/plancast/releases/tag/v0.4.0), then run:
 
 ```sh
-shasum -a 256 -c plancast-0.3.0-macos-arm64.tar.gz.sha256
-tar -xzf plancast-0.3.0-macos-arm64.tar.gz
-sh plancast-0.3.0-macos-arm64/install.command
+shasum -a 256 -c plancast-0.4.0-macos-arm64.tar.gz.sha256
+tar -xzf plancast-0.4.0-macos-arm64.tar.gz
+sh plancast-0.4.0-macos-arm64/install.command
 ```
 
 The installer verifies file checksums, installs into `~/.local/share/plancast/cli/`, and creates `~/.local/bin/plancast`. It requires no administrator access and does not modify your shell configuration or replace unrelated commands.
 
-Version 0.3.0 is an early prerelease. The archive is not a notarized installer. See [Development](#development) to build an archive or install from source. Apple Silicon is the validated target; Intel packaging and speech support remain unverified.
+Version 0.4.0 is an early prerelease. The archive is not a notarized installer. See [Development](#development) to build an archive or install from source. Apple Silicon is the validated target; Intel packaging and speech support remain unverified.
 
 ### 2. Make the command available
 
@@ -92,7 +92,9 @@ Add that export line to `~/.zshrc` to keep it for new terminals. If you previous
 plancast setup-local
 ```
 
-This installs private, checksum-verified **uv 0.12.17**, **FFmpeg 7.1** (from imageio-ffmpeg 0.6.0), and **llama.cpp b11080** runtimes. It uses uv to install private **Python 3.12.13**, downloads **Qwen3 14B** (about 9.3 GB), installs **Pocket TTS 3.1.0** in its own Python environment, and downloads the speech model and the supported voices. Leave additional space for Python dependencies and speech assets.
+Setup offers Qwen3 **4B (2.5 GB)**, **8B (5.0 GB)**, or **14B (9.3 GB)** for writing the conversation. Press Enter to keep the selected model (14B on first setup). Your choice is saved after setup succeeds and reused in future terminals.
+
+This installs private, checksum-verified **uv 0.12.17**, **FFmpeg 7.1** (from imageio-ffmpeg 0.6.0), and **llama.cpp b11080** runtimes. It uses uv to install private **Python 3.12.13**, downloads the selected **Qwen3** model, installs **Pocket TTS 3.1.0** in its own Python environment, and downloads the speech model and the supported voices. Leave additional space for Python dependencies and speech assets.
 
 If you already downloaded the exact supported Qwen3 weights with Ollama, setup verifies and copies them into Plancast storage instead of downloading again. Your Ollama files remain untouched.
 
@@ -187,7 +189,7 @@ Plancast uses two different kinds of models:
 
 | Job | Local default | How to change it |
 | --- | --- | --- |
-| Understand the source and write both speakers' lines | Qwen3 14B through managed llama.cpp | Set `PLANCAST_LOCAL_SCRIPT_MODEL` |
+| Understand the source and write both speakers' lines | Qwen3 14B through managed llama.cpp | Choose during `setup-local`, or override with `PLANCAST_LOCAL_SCRIPT_MODEL` |
 | Turn those lines into two voices | Pocket TTS 3.1.0 | The speech model is currently fixed; choose Jane, George, Alba, or Marius |
 
 Changing the writing model changes the **writing**, not the voices. You only need one writing model for both speakers.
@@ -202,41 +204,46 @@ Changing the writing model changes the **writing**, not the voices. You only nee
 
 These are pinned Q4_K_M GGUF files. The 14B weights come from the Ollama model registry; the 4B and 8B files come from [Qwen’s official GGUF repositories](https://huggingface.co/Qwen). Downloading from the registry does not require or run Ollama. Model IDs such as `qwen3:14b` are Plancast catalog aliases. Download size is **not** total RAM usage: context, runtime memory, macOS, and other apps also need space. Smaller models are worth testing on more constrained machines, but may have more difficulty with grounding or output constraints. A larger model is not a guaranteed quality improvement for this workflow.
 
-### Download and use a smaller model
+### Choose during setup
 
-Set the model for your current terminal, then run setup and generation:
+Run the setup menu to choose the model that writes both speakers' lines:
 
 ```sh
-export PLANCAST_LOCAL_SCRIPT_MODEL="qwen3:8b"
 plancast setup-local
+```
+
+The menu shows download sizes and testing status. Press Enter to keep the selected model, or enter a number/model ID. Ctrl-C cancels. Your selection is saved only after the runtime, model, and voices are ready; a failed setup leaves the previous choice intact. Changing the writing model does not change the voices.
+
+To choose directly without a prompt:
+
+```sh
+plancast setup-local --model qwen3:8b
 plancast PLAN.md --play --output PLAN-qwen3-8b.m4a
 ```
 
-**Keep the variable set for generation too.** Downloading a model does not automatically make it Plancast's default.
+The saved choice works in future terminals without editing your shell profile. To return to 14B, run `plancast setup-local --model qwen3:14b`. Setup reuses matching downloaded assets.
 
-To select a model for just one generation after setup:
+For automation, pass `--model` or use `plancast setup-local --yes` to accept the currently selected model (14B if none is configured). Non-interactive setup without an explicit model, environment override, or `--yes` exits before downloading.
 
-```sh
-PLANCAST_LOCAL_SCRIPT_MODEL=qwen3:8b plancast PLAN.md --output PLAN-qwen3-8b.m4a --play
-```
+### Override the saved model
 
-The inline variable applies to that one command. Use different output filenames to compare models. Setup verifies existing model files; it does not download matching weights again.
-
-### Keep your choice across terminal sessions
-
-Add this line to your `~/.zshrc`, then open a new terminal:
+`PLANCAST_LOCAL_SCRIPT_MODEL` overrides the saved choice for generation. An explicit `setup-local --model` wins over that variable during setup; unset the variable if you want later generation to follow the saved choice.
 
 ```sh
-export PLANCAST_LOCAL_SCRIPT_MODEL="qwen3:8b"
+PLANCAST_LOCAL_SCRIPT_MODEL=qwen3:4b plancast PLAN.md --output PLAN-4b.m4a --play
 ```
 
-To return to the built-in default, remove that line from `~/.zshrc` and clear it from the current terminal:
+That model must already be downloaded. The inline variable applies only to that command. Use different output filenames when comparing models.
+
+**For older releases (0.3.0 and earlier)**, use the environment variable for both setup and generation, or upgrade to 0.4.0:
 
 ```sh
-unset PLANCAST_LOCAL_SCRIPT_MODEL
+export PLANCAST_LOCAL_SCRIPT_MODEL=qwen3:8b
+plancast setup-local
+plancast PLAN.md --play --output PLAN-8b.m4a
 ```
 
-Plancast currently reads environment variables; it does not automatically load a `.env` file or a project configuration file.
+Plancast stores only the writing-model preference in `~/Library/Application Support/Plancast/settings.json`. Resolution is environment variable → saved choice → built-in 14B default. Plancast does not automatically load `.env` or project configuration files. API keys are never saved in this settings file.
 
 ### Manage downloaded models
 
@@ -395,7 +402,7 @@ Temporary generation files are removed after success or failure. `--debug` retai
 | Setting | Default | Applies to |
 | --- | --- | --- |
 | `PLANCAST_PROVIDER` | `local` | `local`, `openai`, or `gemini`; `--provider` takes precedence |
-| `PLANCAST_LOCAL_SCRIPT_MODEL` | `qwen3:14b` | Local writing model |
+| `PLANCAST_LOCAL_SCRIPT_MODEL` | Saved choice, otherwise `qwen3:14b` | Override the local writing model |
 | `PLANCAST_LOCAL_VOICE_A` | `jane` | Local Host A |
 | `PLANCAST_LOCAL_VOICE_B` | `george` | Local Host B |
 | `GEMINI_API_KEY` | None | Required for Gemini generation |

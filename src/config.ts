@@ -1,4 +1,5 @@
 import { modelAsset } from "./runtime/assets.js";
+import { readLocalModel } from "./local-settings.js";
 import { z } from "zod";
 import { PlancastError } from "./domain/errors.js";
 const voices = z.enum([
@@ -72,7 +73,7 @@ export function config(
   });
   const parsed = schema.safeParse({
     scriptModel: local
-      ? (env.PLANCAST_LOCAL_SCRIPT_MODEL ?? "qwen3:14b")
+      ? (env.PLANCAST_LOCAL_SCRIPT_MODEL ?? readLocalModel() ?? "qwen3:14b")
       : gemini
         ? (env.PLANCAST_GEMINI_SCRIPT_MODEL ?? "gemini-3.8-flash")
         : (env.PLANCAST_SCRIPT_MODEL ?? "gpt-4.1-mini"),
