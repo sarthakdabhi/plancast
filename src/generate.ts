@@ -21,6 +21,7 @@ import { PlancastError, interrupted } from "./domain/errors.js";
 export interface Options {
   length: string;
   provider?: string;
+  framing?: string;
   output?: string;
   play?: boolean;
   force?: boolean;
@@ -59,6 +60,7 @@ const manifestSchema = z.object({
   scriptSha256: z.string().length(64),
   audioSha256: z.string().length(64),
   promptVersion: z.string(),
+  framing: z.enum(["auto", "plan", "document"]),
   scriptProvider: z.string(),
   speechProcessing: z.string(),
   scriptRuntimeVersion: z.string().optional(),
@@ -89,6 +91,16 @@ export async function generate(
       "This milestone supports --length 2m only.",
       2,
     );
+  const framingResult = z
+    .enum(["auto", "plan", "document"])
+    .safeParse(options.framing ?? "auto");
+  if (!framingResult.success)
+    throw new PlancastError(
+      "ARGUMENT",
+      "Choose --framing auto, plan, or document.",
+      2,
+    );
+  const framing = framingResult.data;
   const isUrl = /^https?:\/\//i.test(sourcePath);
   if (isUrl && !options.dryRun)
     log(
@@ -112,6 +124,7 @@ export async function generate(
   const preflight = {
     sourcePath: source.path,
     sourceKind: source.kind ?? "markdown",
+    framing,
     targetLength: "2m",
     scriptProvider: local ? "llama.cpp" : settings.provider,
     speechProvider: local ? "pocket-tts" : settings.provider,
@@ -179,7 +192,7 @@ export async function generate(
   let committed = false;
   let retainForRecovery = false;
   try {
-    let targetWords = local ? 350 : 280;
+    let targetWords = 280;
     let pacingRate = 1;
     let feedback: string | undefined;
     let result: Awaited<ReturnType<AudioTools["convert"]>> | undefined;
@@ -196,6 +209,7 @@ export async function generate(
         dialogue = validateDialogue(
           await providers.script.generateDialogue({
             source,
+            framing,
             targetWords,
             signal,
             ...(feedback ? { feedback } : {}),
@@ -209,7 +223,7 @@ export async function generate(
           error instanceof PlancastError &&
           error.code === "WORD_BUDGET"
         ) {
-          feedback = `The previous attempt failed: ${error.message} Rewrite to exactly ${targetWords} spoken words. Count only turns, not summary or facts. Keep all decision-critical content, shorten questions and remove repetition.`;
+          feedback = `The previous attempt failed: ${error.message} Rewrite to exactly ${targetWords} spoken words. Count only turns, not summary or facts. Preserve the source’s main ideas and caveats. Adjust explanation depth to meet the target without inventing information, repetition, or filler.`;
           continue;
         }
         throw error;
@@ -255,7 +269,7 @@ export async function generate(
       if (pass === 1)
         throw new PlancastError(
           "DURATION",
-          "Audio remains outside 110–140 seconds after one correction. No final artifacts were published.",
+          `Audio is ${result.duration.toFixed(1)} seconds; expected 110–140 after one correction. No final artifacts were published.`,
           5,
         );
       targetWords = Math.round(
@@ -290,6 +304,7 @@ export async function generate(
       },
       scriptSha256: hash(text),
       audioSha256: hash(await readFile(result.path)),
+      framing,
       promptVersion: local ? LOCAL_PROMPT_VERSION : PROMPT_VERSION,
       scriptProvider: providers.script.id,
       scriptModel: providers.script.model,

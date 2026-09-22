@@ -79,20 +79,31 @@ it("validates local sentence pairs and keeps citations through composition", asy
       body.response_format.json_schema.schema.properties.problem.properties.text
         .required,
     ).toEqual(["point", "explanation"]);
+    expect(
+      body.response_format.json_schema.schema.properties.problem.properties.text
+        .properties.point.pattern,
+    ).toBeUndefined();
     const content = Object.fromEntries(
       Object.keys(body.response_format.json_schema.schema.properties).map(
         (c) => [
           c,
-          ["problem", "proposal", "recap"].includes(c)
+          c === "questions"
             ? {
-                text: {
-                  point: "Keep data local.",
-                  explanation: "Process the plan on this Mac.",
-                },
-                factId: c === "problem" ? "problem_1" : "proposal_1",
-                interpretation: false,
+                opening: "What does this source tell us?",
+                details: null,
+                uncertainty: null,
+                recap: "What should listeners take away?",
               }
-            : null,
+            : ["problem", "proposal", "recap"].includes(c)
+              ? {
+                  text: {
+                    point: "Keep data local.",
+                    explanation: "Process the plan on this Mac.",
+                  },
+                  factId: c === "problem" ? "problem_1" : "proposal_1",
+                  interpretation: false,
+                }
+              : null,
         ],
       ),
     );

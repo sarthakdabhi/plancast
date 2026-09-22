@@ -5,7 +5,7 @@ import { PlancastError, interrupted } from "../domain/errors.js";
 import type { ScriptProvider } from "./contracts.js";
 import { LLAMA_VERSION, modelAsset } from "../runtime/assets.js";
 import { llamaEngine, type LocalEngine } from "../runtime/llama.js";
-export const LOCAL_PROMPT_VERSION = "dialogue-v8-llama-v1";
+export const LOCAL_PROMPT_VERSION = "dialogue-v9-llama-v1";
 export function llamaScript(
   model: string,
   transport: typeof fetch = fetch,
@@ -46,19 +46,22 @@ export function llamaScript(
             (topic.properties.text as { description?: string }).description ??
             "";
           const allocation = /Write (\d+) to (\d+)/.exec(description);
-          const sentenceWords = allocation
-            ? Math.round((Number(allocation[1]) + Number(allocation[2])) / 4)
+          const minSentenceWords = allocation
+            ? Math.ceil(Number(allocation[1]) / 2)
             : 20;
+          const maxSentenceWords = allocation
+            ? Math.max(minSentenceWords, Math.floor(Number(allocation[2]) / 2))
+            : 30;
           topic.properties.text = {
             type: "object",
             properties: {
               point: {
                 type: "string",
-                description: `A complete sentence of approximately ${sentenceWords} words stating this topic's main point.`,
+                description: `A complete sentence of ${minSentenceWords}–${maxSentenceWords} words stating this topic's main point.`,
               },
               explanation: {
                 type: "string",
-                description: `A second complete sentence of approximately ${sentenceWords} words explaining its source-supported context, constraint or consequence.`,
+                description: `A second complete sentence of ${minSentenceWords}–${maxSentenceWords} words explaining its source-supported context, constraint or consequence.`,
               },
             },
             required: ["point", "explanation"],
@@ -68,7 +71,7 @@ export function llamaScript(
       }
     }
     const localPrompt = passages
-      ? `${prompt} For each text object, write BOTH a point sentence and an explanation sentence. Together these sentences should meet that topic's word allocation. Explain using the evidence without inventing facts. Do not merely copy short source lines.`
+      ? `${prompt} For each text object, write BOTH a point sentence and an explanation sentence. Use the word ranges as drafting guidance, but always finish grammatical sentences. Never join words, truncate a thought, or add filler to hit a count. Explain using the evidence without inventing facts. Do not merely copy short source lines.`
       : prompt;
     for (let attempt = 0; attempt < 3; attempt++) {
       interrupted(signal);
@@ -142,7 +145,7 @@ export function llamaScript(
             })
             .strict();
           for (const value of Object.values(parsed) as { text?: unknown }[]) {
-            if (value === null) continue;
+            if (value === null || !("text" in value)) continue;
             const text = sentence.parse(value.text);
             value.text = `${text.point} ${text.explanation}`;
           }

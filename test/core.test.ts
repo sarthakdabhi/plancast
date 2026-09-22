@@ -201,7 +201,7 @@ describe("pipeline safety", () => {
     const disposeScript = vi.fn(async () => {});
     const localDialogue = dialogue();
     localDialogue.turns.forEach((turn) => {
-      turn.text = Array(100).fill("search").join(" ");
+      turn.text = Array(70).fill("search").join(" ");
     });
     deps.providers.script.generateDialogue.mockResolvedValue(localDialogue);
     const localDeps = {
@@ -225,6 +225,9 @@ describe("pipeline safety", () => {
     );
     expect(result.status).toBe("success");
     expect(deps.acknowledge).not.toHaveBeenCalled();
+    expect(deps.providers.script.generateDialogue).toHaveBeenCalledWith(
+      expect.objectContaining({ targetWords: 280, framing: "auto" }),
+    );
     expect(dispose).toHaveBeenCalledTimes(1);
     expect(disposeScript).toHaveBeenCalledTimes(1);
     expect(
@@ -266,7 +269,7 @@ describe("pipeline safety", () => {
     const deps = dependencies(dir);
     const d = dialogue();
     d.turns.forEach((t) => {
-      t.text = Array(90).fill("search").join(" ");
+      t.text = Array(70).fill("search").join(" ");
     });
     deps.providers.script.generateDialogue.mockResolvedValue(d);
     const convert = deps.audio.convert;
@@ -603,4 +606,41 @@ it("still rejects unknown stage directions and uncited inline IDs", async () => 
     d.turns[0]!.text += ` ${tag}`;
     expect(() => validateDialogue(d, source)).toThrow();
   }
+});
+
+it("passes framing to the script provider and records it in the manifest", async () => {
+  const { dir, path } = await fixture();
+  const deps = dependencies(dir);
+  const result = await generate(
+    path,
+    { length: "2m", framing: "document", yes: true },
+    new AbortController().signal,
+    deps,
+  );
+  expect(deps.providers.script.generateDialogue).toHaveBeenCalledWith(
+    expect.objectContaining({ framing: "document" }),
+  );
+  expect(JSON.parse(await readFile(result.manifestPath!, "utf8")).framing).toBe(
+    "document",
+  );
+});
+it("reports auto framing in offline preflight and rejects invalid framing before I/O", async () => {
+  const { dir, path } = await fixture();
+  const deps = dependencies(dir);
+  const result = await generate(
+    path,
+    { length: "2m", dryRun: true },
+    new AbortController().signal,
+    deps,
+  );
+  expect(result).toMatchObject({ framing: "auto" });
+  await expect(
+    generate(
+      "https://example.com/article",
+      { length: "2m", framing: "other" },
+      new AbortController().signal,
+      deps,
+    ),
+  ).rejects.toMatchObject({ code: "ARGUMENT" });
+  expect(deps.providers.script.generateDialogue).not.toHaveBeenCalled();
 });

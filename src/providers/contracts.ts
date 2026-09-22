@@ -1,5 +1,7 @@
 import type { Source } from "../input/markdown.js";
+export type Framing = "auto" | "plan" | "document";
 export interface DialogueRequest {
+  framing?: Framing;
   source: Source;
   targetWords: number;
   feedback?: string;
