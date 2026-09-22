@@ -2,20 +2,39 @@
 
 [Website](https://sarthakdabhi.github.io/plancast/) · [Downloads](https://github.com/sarthakdabhi/plancast/releases)
 
-**Turn a Markdown plan into a two-person audio briefing—then listen at your own pace.**
+**Turn documents and public articles into two-person audio briefings—then listen at your own pace.**
 
-Plancast reads your plan, writes a grounded conversation, and creates an audio file with two distinct AI voices. Generation runs locally on your Mac by default. OpenAI is available as an explicit alternative.
+Plancast accepts **Markdown, plain-text files, public article URLs, and text-based PDFs**. It extracts the content, writes a grounded conversation, and creates an audio briefing with two distinct AI voices: Jane and George. Dialogue and speech generation run locally on your Mac by default. OpenAI is available as an explicit alternative.
 
 ```sh
-plancast PLAN.md --play
+plancast PLAN.md --play                         # Markdown plan
+plancast article.txt --play                     # Plain-text article or notes
+plancast report.pdf --play                      # Text-based PDF
+plancast "https://example.com/article" --play    # Public article URL
 ```
 
-**macOS 14+ · Standalone Apple Silicon installation · Local by default · Two-minute briefings**
+Replace the example filenames or URL with your own source. Fetching an article contacts that website; the extracted content is processed locally unless you explicitly choose a cloud provider.
+
+**macOS 14+ · Apple Silicon · Local by default · Two-minute briefings**
+
+## What you can listen to
+
+| Source | Examples | How Plancast handles it |
+| --- | --- | --- |
+| **Markdown** (`.md`, `.markdown`) | PRDs, implementation plans, migration proposals | Explains the proposal, rationale, risks, uncertainty, and next action |
+| **Plain text** (`.txt`) | Saved articles, notes, reports | Explains the main argument or findings, evidence, and caveats |
+| **Public article links** (`http://` or `https://`) | Blog posts, essays, readable web articles | Extracts the main article without executing scripts or loading embedded resources |
+| **Text-based PDFs** (`.pdf`) | Reports, papers, exported documents | Extracts text locally and retains page-to-line references |
+
+You get an **M4A audio file**, a **two-host transcript**, and a **JSON sidecar** with generation metadata. Non-Markdown sidecars also retain the extracted source text. The local browser player supports pause, seeking, and playback speed controls.
+
+Word documents (`.docx`), saved HTML files, scanned PDFs/OCR, password-protected PDFs, and direct PDF URLs are **not supported yet**. Download a text-based PDF before using it; export other documents to UTF-8 `.txt` or `.md`. Login-protected, paywalled, and JavaScript-only webpages may not extract. See [Supported inputs and limits](#supported-inputs-and-limits) for details.
 
 ## Contents
 
+- [What you can listen to](#what-you-can-listen-to)
 - [Quick start](#quick-start)
-- [Additional input formats](#additional-input-formats)
+- [Supported inputs and limits](#supported-inputs-and-limits)
 - [Everyday commands](#everyday-commands)
 - [Choose and download a model](#choose-and-download-a-model)
 - [Choose voices](#choose-voices)
@@ -76,17 +95,20 @@ This installs private, checksum-verified **uv 0.12.17**, **FFmpeg 7.1** (from im
 
 If you already downloaded the exact supported Qwen3 weights with Ollama, setup verifies and copies them into Plancast storage instead of downloading again. Your Ollama files remain untouched.
 
-Setup needs internet access. It does not send any plan content. You do not need an OpenAI account or API key for local generation. Repeat setup when downloading a different model or repairing missing assets, not before every briefing.
+Setup needs internet access. It does not send any document content. You do not need an OpenAI account or API key for local generation. Repeat setup when downloading a different model or repairing missing assets, not before every briefing.
 
 ### 4. Generate your first briefing
 
-Move to the directory containing your plan, or pass its full path:
+Choose a local document or a public article URL. For files, move to their directory or pass a full path:
 
 ```sh
 plancast PLAN.md --length 2m --play
+plancast article.txt --play
+plancast report.pdf --play
+plancast "https://example.com/article" --output ./article-briefing.m4a --play
 ```
 
-The CLI creates the audio, opens a local browser player, and returns to the terminal. Press **Play** if your browser blocks autoplay. Local generation can take several minutes, especially for long plans.
+The CLI creates the audio, opens a local browser player, and returns to the terminal. Press **Play** if your browser blocks autoplay. Local generation can take several minutes, especially for long documents. Only `--length 2m` is currently supported; `1m`, `3m`, and `4m` are not implemented.
 
 > **Already installed?** Start with `plancast PLAN.md --play`. To listen to a briefing you already generated, use `plancast listen PLAN.plancast.m4a`.
 
@@ -101,7 +123,7 @@ plancast preview-voices --play
 
 For a standalone upgrade, extract the new archive and rerun its `install.command`, then run `plancast setup-local`. Existing models are reused. Setup installs missing managed tools and voice assets, then the preview command plays the current Jane/George defaults. Existing voice environment variables override those defaults. Previously generated audio keeps its original voices; regenerate with `--force` or a new `--output` to use the new pair.
 
-## Additional input formats
+## Supported inputs and limits
 
 Available in **Plancast 0.2.0** through Homebrew and the standalone archive. Existing Homebrew users can update with `brew update && brew upgrade plancast`.
 
@@ -135,7 +157,10 @@ Local files produce audio beside the source. URL briefings default to `article-<
 | Install or verify local runtime, models, and voices | `plancast setup-local` |
 | List supported models and download status | `plancast models` |
 | Preview the selected local voice pair | `plancast preview-voices --play` |
-| Generate and open the player | `plancast PLAN.md --play` |
+| Brief a Markdown plan | `plancast PLAN.md --play` |
+| Brief plain-text notes or an article | `plancast article.txt --play` |
+| Brief a text-based PDF | `plancast report.pdf --play` |
+| Brief a public web article | `plancast "https://example.com/article" --play` |
 | Generate without opening the browser | `plancast PLAN.md` |
 | Listen to existing audio | `plancast listen PLAN.plancast.m4a` |
 | Regenerate and replace existing files | `plancast PLAN.md --play --force` |
@@ -161,7 +186,7 @@ Plancast uses two different kinds of models:
 
 | Job | Local default | How to change it |
 | --- | --- | --- |
-| Understand the plan and write both speakers' lines | Qwen3 14B through managed llama.cpp | Set `PLANCAST_LOCAL_SCRIPT_MODEL` |
+| Understand the source and write both speakers' lines | Qwen3 14B through managed llama.cpp | Set `PLANCAST_LOCAL_SCRIPT_MODEL` |
 | Turn those lines into two voices | Pocket TTS 3.1.0 | The speech model is currently fixed; choose Jane, George, Alba, or Marius |
 
 Changing the writing model changes the **writing**, not the voices. You only need one writing model for both speakers.
@@ -246,7 +271,7 @@ Preview the pair before generating a full podcast:
 plancast preview-voices --play
 ```
 
-This creates a short local conversation using your selected voices. It does not use your plan, the writing model, or a cloud API. Pocket TTS must already be installed with `setup-local`. Preview audio and its transcript are saved under `~/Library/Caches/Plancast/voice-previews/`.
+This creates a short local conversation using your selected voices. It does not use your documents, the writing model, or a cloud API. Pocket TTS must already be installed with `setup-local`. Preview audio and its transcript are saved under `~/Library/Caches/Plancast/voice-previews/`.
 
 Both podcasts and previews gently balance each turn's volume, reserve peak headroom, and apply short boundary fades to reduce clicks. They keep the existing 300 ms pause between speakers. The local speech worker avoids hard-clipping peaks before PCM conversion. These controls improve signal consistency; they do not guarantee natural pronunciation or human-like delivery. Listen to the preview to judge the voices, accent, and clarity on your headphones or speakers. Voices remain AI-generated.
 
@@ -270,7 +295,7 @@ export OPENAI_API_KEY="your-api-key"
 plancast PLAN.md --provider openai --output PLAN-openai.m4a --play
 ```
 
-**Your plan goes to OpenAI for dialogue generation, and dialogue text goes to OpenAI for speech synthesis. Your API account pays for usage.** A ChatGPT subscription does not include API credit. Keep keys out of source control.
+**Your extracted source content goes to OpenAI for dialogue generation, and dialogue text goes to OpenAI for speech synthesis. Your API account pays for usage.** A ChatGPT subscription does not include API credit. Keep keys out of source control.
 
 The CLI displays a disclosure and asks for confirmation. For automation, acknowledge that disclosure with `--yes`:
 
@@ -300,13 +325,13 @@ The page embeds a local copy of the audio. It uses no server, remote assets, or 
 
 ## Files and storage
 
-For `PLAN.md`, the default outputs are:
+For a local file such as `report.pdf`, the default outputs are:
 
 ```text
-PLAN.md                 Your original plan
-PLAN.plancast.m4a       Generated audio
-PLAN.plancast.txt       Host-labeled transcript of the generated dialogue
-PLAN.plancast.json      Models, voices, duration, hashes, and pacing metadata
+report.pdf                 Your original document
+report.plancast.m4a         Generated audio
+report.plancast.txt         Host-labeled transcript
+report.plancast.json        Source text, PDF page references, models, voices, duration, and hashes
 ```
 
 Using `--output ./audio/briefing.m4a` creates `briefing.m4a`, `briefing.txt`, and `briefing.json` in that directory. Existing audio **or either sidecar** blocks generation unless you pass `--force`.
@@ -317,7 +342,7 @@ Using `--output ./audio/briefing.m4a` creates `briefing.m4a`, `briefing.txt`, an
 | Private uv and FFmpeg | `~/Library/Application Support/Plancast/tools/` |
 | Private Python | `~/Library/Application Support/Plancast/python/` |
 | Python download/package cache | `~/Library/Application Support/Plancast/cache/uv/` |
-| Generated briefing and sidecars | Beside the source, or at `--output` |
+| Generated briefing and sidecars | Beside a local source; current directory for URLs; or at `--output` |
 | Pocket TTS Python environment | `~/Library/Application Support/Plancast/pocket-tts-3.1.0-managed/` |
 | Writing-model downloads | `~/Library/Application Support/Plancast/models/` |
 | Managed llama.cpp runtime | `~/Library/Application Support/Plancast/llama.cpp-b11080-<arch>/` |
@@ -351,7 +376,7 @@ Inspect the selected configuration without generating audio:
 plancast PLAN.md --dry-run --json
 ```
 
-Dry-run validates source/output arguments and reports configuration; it does not start llama.cpp or prove that the selected model is installed. It can still report an existing-output conflict; use a fresh `--output` path to inspect another configuration.
+Dry-run supports local Markdown, text, and PDF files; URL input is rejected without making a network request. It validates source/output arguments and reports configuration; it does not start llama.cpp or prove that the selected model is installed. It can still report an existing-output conflict; use a fresh `--output` path to inspect another configuration.
 
 ## Troubleshooting
 
@@ -366,7 +391,10 @@ Dry-run validates source/output arguments and reports configuration; it does not
 | Another setup may be running | Wait for it to finish. After a hard crash, remove only the `.setup-llama.lock` directory named in the error if no setup is running. |
 | Pocket TTS failed or is not installed | Run `plancast setup-local` to install dependencies and download the supported voices. |
 | Local pacing needs the managed FFmpeg runtime | Run `plancast setup-local`, then retry. |
-| Plan exceeds the local input limit | Split the plan into smaller sections, or explicitly choose OpenAI if sending it remotely is acceptable. |
+| Document exceeds the local input limit | Split the document into smaller sections, or explicitly choose OpenAI if sending it remotely is acceptable. |
+| URL does not contain a readable article | Use a public article page or save its readable content as `.txt`. Login, paywall, and JavaScript-only pages are not supported. |
+| PDF page has no extractable text | Use a text-based PDF or export its text. OCR and image-only pages are not supported. |
+| URL points to a PDF | Download the PDF first, then run `plancast report.pdf --play`. |
 | Word-budget, schema, or grounding failure | Read the error; try a smaller source or another writing model. Validation failures stop instead of publishing unchecked audio. |
 | Browser opens but does not play | Click Play. If the browser cannot decode it, open the original M4A in QuickTime. |
 | Generation seems slow | Watch the extraction, dialogue, and voice progress messages. Try an 8B model as an experiment; inspect its transcript before judging the result. |
@@ -377,7 +405,7 @@ After changing the code, rebuild the linked command:
 npm run build
 ```
 
-For more diagnostics, retry with `--debug` and a new output path. Retained files may contain derived plan content.
+For more diagnostics, retry with `--debug` and a new output path. Retained files may contain derived source content.
 
 Exit codes: `0` success, `1` unexpected local failure, `2` input/arguments, `3` configuration/setup/acknowledgement, `4` provider or script validation, `5` audio validation, `6` overwrite protection, `130` interruption.
 
@@ -386,7 +414,7 @@ Exit codes: `0` success, `1` unexpected local failure, `2` input/arguments, `3` 
 - **Two-minute mode only:** `2m` is the default and targets 110–140 seconds. Five-minute mode is not implemented.
 - **Input:** Markdown/text up to 2 MB; also supports public article URLs and text-based PDFs as described above. Local generation additionally limits the structured source payload to 65,000 characters and requests a 32K model context.
 - **Language and hardware:** English and an Apple M2 Max with 64 GB have been exercised. Smaller Macs, Intel Macs, and other languages have not been comprehensively validated.
-- **Local content stays local:** setup downloads software and model assets; subsequent local generation processes the plan on this Mac. The speech worker disables networking; llama.cpp uses offline mode and a local model file. No automatic cloud fallback or Plancast telemetry is added.
+- **Local content stays local:** setup downloads software and model assets; subsequent local generation processes the extracted source on this Mac. The speech worker disables networking; llama.cpp uses offline mode and a local model file. No automatic cloud fallback or Plancast telemetry is added.
 - **Validation has limits:** source quotations, references, required topics, word budgets, and audio duration are checked. Those checks cannot prove every paraphrase is true or catch every omission. Review the transcript for important decisions.
 - **Bounded corrections:** one correction is allowed. Local audio narrowly outside the duration window may receive a pitch-preserving 0.85×–1.15× pacing adjustment instead of another script pass; the applied rate is recorded in metadata.
 - **Not yet implemented:** generation caching, persistent project/user config files, Keychain integration, additional speech backends, and a native Mac interface.
