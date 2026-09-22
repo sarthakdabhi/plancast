@@ -1,5 +1,7 @@
 # Plancast
 
+[Website](https://sarthakdabhi.github.io/plancast/) · [Downloads](https://github.com/sarthakdabhi/plancast/releases)
+
 **Turn a Markdown plan into a two-person audio briefing—then listen at your own pace.**
 
 Plancast reads your plan, writes a grounded conversation, and creates an audio file with two distinct AI voices. Generation runs locally on your Mac by default. OpenAI is available as an explicit alternative.
