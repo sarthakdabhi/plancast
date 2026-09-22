@@ -283,3 +283,9 @@ Defer these until the vertical slice is repeatedly useful:
 - npm `package.json` and `bin` documentation: <https://docs.npmjs.com/files/package.json/>
 - Commander documentation: <https://github.com/tj/commander.js/blob/master/Readme.md>
 - Complete product requirements: [`../prd_outputs/Plancast CLI/plancast_cli_PRD.md`](../prd_outputs/Plancast%20CLI/plancast_cli_PRD.md)
+
+## Document inputs (0.2.0 development)
+
+`readSource` normalizes Markdown, UTF-8 text, public HTML articles, and text-based PDFs into the same line-indexed `Source`. Non-Markdown inputs use topic/argument/evidence semantics within the existing typed evidence slots; absent next actions remain null. The manifest retains extracted text and PDF page ranges for reproducible grounding.
+
+URL extraction uses Mozilla Readability and inert jsdom documents. The downloader pins a validated public DNS address to each socket and revalidates every redirect, with download bounds and no page-script execution or embedded-resource loading. PDF.js extracts local text without OCR or password prompts. No extra manually installed tools are required. `--dry-run` never fetches URLs.

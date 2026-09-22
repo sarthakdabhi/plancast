@@ -125,3 +125,11 @@ The Apple Silicon standalone archive includes Node 24.21.0 (official archive che
 - A separate restricted-PATH check exercised FFmpeg pacing through the packaged audio module; a 2-second tone slowed to approximately 2.35 seconds. Native Node and FFmpeg dynamic-library dependencies resolve only to macOS system libraries/frameworks, not Homebrew libraries.
 
 The installer does not edit shell profiles, replace unrelated commands, publish releases, or uninstall existing system tools. Add `~/.local/bin` first on PATH to prefer this installation over an older npm link. Release archives are local artifacts, not public downloads or a notarized installer. Intel speech compatibility, a truly fresh Mac without cached models, and oldest-macOS validation remain release gates.
+
+## Document inputs (0.2.0 development)
+
+- Build, lint, and all 105 tests pass, including real PDF extraction with page ranges, malformed/scanned/mixed-page failures, plain text, inert article extraction, source snapshots, article-specific dialogue, public-address checks, DNS pinning, redirect bounds, response limits, and offline URL dry-run rejection.
+- A public article URL was extracted successfully. Its HTML/scripts were not executed; extracted content was not sent to a cloud model.
+- A synthetic plain-text article produced a 125.0-second local Jane/George briefing. Script, audio, and normalized-source hashes matched the sidecar. The script retained the fictional-study qualifier, sampling caveats, and uncertainty and did not invent a next action. This is a smoke check, not a broad quality benchmark.
+- The 0.2.0 standalone archive was installed locally and exercised with its private Node runtime and system-only PATH. Plain text and the existing 17-page PRD PDF passed dry-run extraction; PDF extraction required no external utilities.
+- The public GitHub release and Homebrew formula remain at 0.1.0. Scanned PDFs/OCR, password-protected PDFs, authenticated webpages, and JavaScript-rendered articles are outside this implementation.

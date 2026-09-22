@@ -7,11 +7,14 @@ process.once("SIGINT", stop);
 process.once("SIGTERM", stop);
 const program = new Command()
   .name("plancast")
-  .version("0.1.0")
+  .version("0.2.0")
   .description(
-    "Turn a Markdown plan into a fact-faithful two-host audio briefing",
+    "Turn documents and public articles into grounded two-host audio briefings",
   )
-  .argument("<source>", "UTF-8 Markdown plan, up to 2 MB")
+  .argument(
+    "<source>",
+    "Markdown/text file (2 MB), text-based PDF (20 MB), or public article URL",
+  )
   .option(
     "--provider <provider>",
     "Generation provider: local (default) or openai",

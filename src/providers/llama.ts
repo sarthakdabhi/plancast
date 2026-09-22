@@ -5,7 +5,7 @@ import { PlancastError, interrupted } from "../domain/errors.js";
 import type { ScriptProvider } from "./contracts.js";
 import { LLAMA_VERSION, modelAsset } from "../runtime/assets.js";
 import { llamaEngine, type LocalEngine } from "../runtime/llama.js";
-export const LOCAL_PROMPT_VERSION = "dialogue-v7-llama-v1";
+export const LOCAL_PROMPT_VERSION = "dialogue-v8-llama-v1";
 export function llamaScript(
   model: string,
   transport: typeof fetch = fetch,
@@ -24,7 +24,7 @@ export function llamaScript(
     if (payload.length > 65000)
       throw new PlancastError(
         "LOCAL_CONTEXT",
-        "This plan exceeds the local model input limit. Split it into smaller plans.",
+        "This document exceeds the local model input limit. Split it into smaller documents.",
         2,
       );
     progress?.(

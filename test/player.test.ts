@@ -17,5 +17,7 @@ it("embeds exact audio bytes and disallows remote resources", () => {
   const embedded = /src="data:audio\/mp4;base64,([^"]+)"/.exec(html)?.[1];
   expect(Buffer.from(embedded!, "base64")).toEqual(bytes);
   expect(html).toContain("default-src 'none'; media-src data:");
-  expect(html).not.toMatch(/https?:\/\//);
+  // External navigation is permitted; loading external resources is not.
+  expect(html.replace(/<a\b[^>]*>/g, "")).not.toMatch(/https?:\/\//);
+  expect(html).toContain('rel="noopener noreferrer"');
 });

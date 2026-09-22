@@ -37,6 +37,24 @@ export interface Dependencies {
 const manifestSchema = z.object({
   version: z.literal(1),
   sourceSha256: z.string().length(64),
+  source: z
+    .object({
+      kind: z.string(),
+      location: z.string(),
+      title: z.string().optional(),
+      extractedText: z.string().optional(),
+      originalSha256: z.string().optional(),
+      pages: z
+        .array(
+          z.object({
+            page: z.number(),
+            startLine: z.number(),
+            endLine: z.number(),
+          }),
+        )
+        .optional(),
+    })
+    .optional(),
   scriptSha256: z.string().length(64),
   audioSha256: z.string().length(64),
   promptVersion: z.string(),
@@ -70,13 +88,18 @@ export async function generate(
       "This milestone supports --length 2m only.",
       2,
     );
-  const source = await readSource(sourcePath);
+  const isUrl = /^https?:\/\//i.test(sourcePath);
+  if (isUrl && !options.dryRun)
+    log(
+      "Fetching public article: the website receives a request from this Mac. Extraction and local generation stay on this Mac.",
+    );
+  const source = await readSource(sourcePath, signal, !options.dryRun);
+  const defaultStem = isUrl
+    ? `article-${hash(sourcePath).slice(0, 12)}`
+    : source.path.slice(0, -extname(source.path).length);
   const settings = config(process.env, options.provider);
   const local = settings.provider === "local";
-  const audioPath = resolve(
-    options.output ??
-      source.path.slice(0, -extname(source.path).length) + ".plancast.m4a",
-  );
+  const audioPath = resolve(options.output ?? defaultStem + ".plancast.m4a");
   if (extname(audioPath).toLowerCase() !== ".m4a")
     throw new PlancastError("ARGUMENT", "--output must end in .m4a.", 2);
   const stem = audioPath.slice(0, -4);
@@ -84,6 +107,7 @@ export async function generate(
   await checkOutputs(paths, !!options.force);
   const preflight = {
     sourcePath: source.path,
+    sourceKind: source.kind ?? "markdown",
     targetLength: "2m",
     scriptProvider: local ? "llama.cpp" : "openai",
     speechProvider: local ? "pocket-tts" : "openai",
@@ -108,7 +132,7 @@ export async function generate(
     );
   else
     log(
-      "Cloud disclosure: plan content leaves this Mac for OpenAI script generation; dialogue text goes to OpenAI speech synthesis. Your API account pays for usage. Voices are AI-generated.",
+      "Cloud disclosure: source content leaves this Mac for OpenAI script generation; dialogue text goes to OpenAI speech synthesis. Your API account pays for usage. Voices are AI-generated.",
     );
   if (!local && !options.yes) {
     const acknowledge =
@@ -248,6 +272,18 @@ export async function generate(
     const manifest = manifestSchema.parse({
       version: 1,
       sourceSha256: source.sha256,
+      source: {
+        kind: source.kind ?? "markdown",
+        location: source.path,
+        title: source.title,
+        ...(source.kind && source.kind !== "markdown"
+          ? {
+              extractedText: source.text,
+              pages: source.pages,
+              originalSha256: source.originalSha256,
+            }
+          : {}),
+      },
       scriptSha256: hash(text),
       audioSha256: hash(await readFile(result.path)),
       promptVersion: local ? LOCAL_PROMPT_VERSION : PROMPT_VERSION,

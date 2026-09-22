@@ -119,7 +119,11 @@ export function validateDialogue(
       fail(`Script omits grounded coverage for ${category}.`);
   }
   if (!d.summary.problem.trim() || !d.summary.proposal.trim())
-    fail("Source must support a problem and proposal.");
+    fail(
+      source.kind && source.kind !== "markdown"
+        ? "Source must support a topic and central argument or finding."
+        : "Source must support a problem and proposal.",
+    );
   const words = wordCount(d.turns.map((t) => t.text).join(" "));
   if (words < targetWords * 0.85 || words > targetWords * 1.15)
     throw new PlancastError(

@@ -15,6 +15,7 @@ plancast PLAN.md --play
 ## Contents
 
 - [Quick start](#quick-start)
+- [Additional input formats](#additional-input-formats)
 - [Everyday commands](#everyday-commands)
 - [Choose and download a model](#choose-and-download-a-model)
 - [Choose voices](#choose-voices)
@@ -99,6 +100,33 @@ plancast preview-voices --play
 ```
 
 For a standalone upgrade, extract the new archive and rerun its `install.command`, then run `plancast setup-local`. Existing models are reused. Setup installs missing managed tools and voice assets, then the preview command plays the current Jane/George defaults. Existing voice environment variables override those defaults. Previously generated audio keeps its original voices; regenerate with `--force` or a new `--output` to use the new pair.
+
+## Additional input formats
+
+**Available in the 0.2.0 development build. The published 0.1.0 archive and Homebrew formula still accept Markdown only.** Build this checkout with `npm ci && npm run build`; use `node dist/cli.js` in place of `plancast` below, or build a standalone archive with `npm run package:standalone`.
+
+```sh
+plancast article.txt --play
+plancast "https://example.com/article" --play
+plancast report.pdf --play
+```
+
+| Input | Support and limits |
+| --- | --- |
+| `.md`, `.markdown` | UTF-8 Markdown, up to 2 MB; existing plan briefing behavior |
+| `.txt` | UTF-8 text, up to 2 MB; article, report, or notes |
+| Public HTTP(S) article URL | Main readable HTML content; up to 3 MB downloaded HTML, five redirects, 30-second download timeout |
+| Local `.pdf` | Text-based, unencrypted PDF, up to 20 MB and 200 pages; 30-second extraction timeout |
+
+Article and PDF extraction happens locally. Fetching a URL contacts the website from your Mac; it does not send the article to a cloud AI service unless you explicitly choose OpenAI. URL requests do not use browser cookies, execute page scripts, or load embedded resources. Local/private addresses, credentials in URLs, and custom ports are rejected. Login-protected, paywalled, or JavaScript-only content may not extract; save readable text as `.txt` instead. Remote PDF URLs are not supported: download the PDF and pass its local path.
+
+Scanned PDFs need OCR, which is not included. A PDF with a page containing no extractable text is rejected rather than silently dropping that page. Complex columns, tables, or unusual fonts can produce imperfect reading order. Extracted text is limited to 2 MB, and the local model's 65,000-character structured input limit still applies. Split long documents; content is never silently truncated to fit.
+
+Non-Markdown briefings discuss the source's topic, main argument or findings, evidence, limitations, and uncertainty. A next action is included only when the source explicitly recommends one. Markdown keeps the existing plan-specific prompts.
+
+Local files produce audio beside the source. URL briefings default to `article-<URL hash>.plancast.m4a` in the current directory; use `--output ./briefing.m4a` to choose a name. The JSON sidecar retains the extracted text, source location, normalized text hash, and PDF page-to-line references and original file hash. Treat sidecars as source content; they may contain sensitive information. Grounding references correspond to extracted text, not raw HTML or PDF bytes.
+
+`--dry-run` remains offline: it can extract local text/PDFs but rejects URL input without fetching it. To inspect a web article offline, save its text first.
 
 ## Everyday commands
 
@@ -254,6 +282,8 @@ No key or `--yes` is required for local mode. Neither provider silently falls ba
 
 ## Listen in your browser
 
+The local player includes Plancast branding, a credit to Sarthak Dabhi, and links to the website and GitHub repository. Links open in a new tab. The player loads no remote assets or analytics; external sites are contacted only if you follow a link. Reopen existing audio with `plancast listen` to generate a player with the latest branding.
+
 ```sh
 plancast listen PLAN.plancast.m4a
 ```
@@ -354,7 +384,7 @@ Exit codes: `0` success, `1` unexpected local failure, `2` input/arguments, `3` 
 ## Limits and privacy
 
 - **Two-minute mode only:** `2m` is the default and targets 110–140 seconds. Five-minute mode is not implemented.
-- **Input:** UTF-8 Markdown up to 2 MB. Local generation additionally limits the structured source payload to 65,000 characters and requests a 32K model context.
+- **Input:** Markdown/text up to 2 MB; development builds also support public article URLs and text-based PDFs as described above. Local generation additionally limits the structured source payload to 65,000 characters and requests a 32K model context.
 - **Language and hardware:** English and an Apple M2 Max with 64 GB have been exercised. Smaller Macs, Intel Macs, and other languages have not been comprehensively validated.
 - **Local content stays local:** setup downloads software and model assets; subsequent local generation processes the plan on this Mac. The speech worker disables networking; llama.cpp uses offline mode and a local model file. No automatic cloud fallback or Plancast telemetry is added.
 - **Validation has limits:** source quotations, references, required topics, word budgets, and audio duration are checked. Those checks cannot prove every paraphrase is true or catch every omission. Review the transcript for important decisions.

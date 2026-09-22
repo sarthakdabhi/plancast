@@ -296,6 +296,25 @@ describe("pipeline safety", () => {
     expect(deps.providers.script.generateDialogue).not.toHaveBeenCalled();
     expect(deps.providers.speech.synthesize).not.toHaveBeenCalled();
   });
+  it("retains extracted text and its hash in a plain-text briefing manifest", async () => {
+    const { dir, path } = await fixture();
+    const textPath = join(dir, "article.txt");
+    const text = await readFile(path, "utf8");
+    await writeFile(textPath, text);
+    const result = await generate(
+      textPath,
+      { length: "2m", yes: true },
+      signal(),
+      dependencies(dir),
+    );
+    const manifest = JSON.parse(await readFile(result.manifestPath!, "utf8"));
+    expect(manifest.source).toMatchObject({
+      kind: "text",
+      location: textPath,
+      extractedText: text,
+    });
+    expect(manifest.sourceSha256).toBe((await readSource(textPath)).sha256);
+  });
   it("publishes exact script, ordered voices and verified manifest", async () => {
     const { dir, path } = await fixture();
     const deps = dependencies(dir);

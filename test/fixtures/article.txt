@@ -1,0 +1,18 @@
+How teams remember technical documents
+
+This fictional research report describes a small pilot comparing two ways of reviewing technical documents.
+Forty volunteers from one software team read a design document and answered questions about it the following day.
+Half the volunteers received a short written summary alongside the document. The other half received only the original document.
+The group with a summary recalled more of the document's main tradeoffs on the next-day questionnaire.
+The pilot did not measure whether summaries improved the quality of actual engineering decisions.
+The summary group also reported spending less time reviewing the material, but review time was self-reported rather than measured.
+Participants were assigned by availability, not randomly, so differences between the groups may have influenced the findings.
+All volunteers came from one team already familiar with the subject. The result may not apply to beginners or other organizations.
+The authors argue that a summary can help orient readers before they examine the full source.
+They caution that compression can remove important qualifications and that readers should not treat summaries as complete substitutes for the source.
+One example in the report concerns a proposed database migration: remembering the headline benefit without the rollback condition would leave the reader with an incomplete understanding.
+The report distinguishes recalling facts from understanding uncertainty. The questionnaire mainly tested recall and offered limited evidence about the latter.
+The pilot does not establish that audio summaries perform better than written summaries; audio was not included in the comparison.
+A small number of participants preferred the original document because they wanted to inspect assumptions and supporting details directly.
+The report leaves open whether repeated use would change reading habits or increase reliance on incomplete summaries.
+These findings are preliminary observations from a fictional pilot, not a validated benchmark or a general claim about all readers.

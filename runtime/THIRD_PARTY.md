@@ -20,3 +20,12 @@ Jane and George are the Pocket TTS presets derived from VCTK recordings `p339_02
 - FFmpeg 7.1: executable extracted from the SHA-256-pinned imageio-ffmpeg 0.6.0 platform wheel on PyPI. Its archive includes the wrapper's BSD license; the FFmpeg build is separately GPL-licensed. Upstream sources and build provenance: https://github.com/imageio/imageio-ffmpeg/tree/v0.6.0 and https://github.com/imageio/imageio-binaries/tree/master/ffmpeg. FFmpeg is downloaded at setup and invoked as a separate process, not linked into Plancast or bundled in the standalone archive.
 
 Runtime download URLs, versions, sizes and digests are recorded in `src/runtime/tools.ts`. Private Python packages retain their upstream licenses in the installed environment.
+
+## Document extraction
+
+- Mozilla Readability (Apache-2.0): https://github.com/mozilla/readability
+- jsdom (MIT): https://github.com/jsdom/jsdom
+- PDF.js / pdfjs-dist (Apache-2.0): https://github.com/mozilla/pdf.js
+- ipaddr.js (MIT): https://github.com/whitequark/ipaddr.js
+
+These npm dependencies and their transitive dependencies retain their own license files in standalone archives. PDF.js may include an optional platform canvas dependency; it is installed by the archive builder, not manually by users.

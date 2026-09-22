@@ -10,13 +10,20 @@ export function dialogueComposer(
   evidence: Evidence,
   targetWords: number,
   strictPassageLengths = true,
+  document = false,
 ) {
+  const opening = document
+    ? "What is this about, and what does the source say?"
+    : "What's the problem, and what's proposed?";
+  const details = document
+    ? "What happens, and what are the limitations?"
+    : "How will it work, and what could go wrong?";
   const presentCount =
     Object.values(evidence.summary).filter((value) => value.trim()).length + 1;
   const questionWords =
-    wordCount("What's the problem, and what's proposed?") +
+    wordCount(opening) +
     (evidence.summary.stages.trim() || evidence.summary.risks.trim()
-      ? wordCount("How will it work, and what could go wrong?")
+      ? wordCount(details)
       : 0) +
     (evidence.summary.uncertainty.trim() ||
     evidence.summary.openQuestions.trim()
@@ -93,11 +100,11 @@ export function dialogueComposer(
   type Draft = z.infer<typeof schema>;
   const groups: { question: string; keys: (keyof Draft)[] }[] = [
     {
-      question: "What's the problem, and what's proposed?",
+      question: opening,
       keys: ["problem", "proposal", "rationale"],
     },
     {
-      question: "How will it work, and what could go wrong?",
+      question: details,
       keys: ["stages", "risks"],
     },
     {
@@ -118,7 +125,7 @@ export function dialogueComposer(
     targetWords - activeGroups.reduce((n, g) => n + wordCount(g.question), 0);
   return {
     schema,
-    instructions: `Write complete grammatical sentences for each required topic, using only its evidence. Null topics are absent and must stay null. Each passage's factId must support its text; select the strongest matching fact. Never put IDs or citations in text. Keep interpretations explicitly qualified, and use interpretation=false for direct source paraphrases. The passages will be assembled locally into a two-host dialogue with fixed short questions. ALL passage texts combined must total approximately ${bodyWords} words, within 10%; this is one briefing, not that many words per topic. Each non-null passage MUST contain ${minWords}–${passageWords} words; these per-field limits include recap and nextAction. Recap restates the proposal and rationale briefly. Put the concrete immediate next action in nextAction. Summarize at a high level when needed; never begin a list item or sentence you cannot finish within the limit. In stages, summarize the sequence rather than enumerating every phase. Avoid repeated explanations across passages, stage directions and filler. Preserve material risks, exclusions, quantities and uncertainty.`,
+    instructions: `Write complete grammatical sentences for each required topic, using only its evidence. Null topics are absent and must stay null. Each passage's factId must support its text; select the strongest matching fact. Never put IDs or citations in text. Keep interpretations explicitly qualified, and use interpretation=false for direct source paraphrases. The passages will be assembled locally into a two-host dialogue with fixed short questions. ALL passage texts combined must total approximately ${bodyWords} words, within 10%; this is one briefing, not that many words per topic. Each non-null passage MUST contain ${minWords}–${passageWords} words; these per-field limits include recap and nextAction. ${document ? "Recap restates the central argument and evidence. Only discuss next actions explicitly recommended by the source; never invent an action for an article." : "Recap restates the proposal and rationale briefly. Put the concrete immediate next action in nextAction."} Summarize at a high level when needed; never begin a list item or sentence you cannot finish within the limit. In stages, summarize the sequence rather than enumerating every phase. Avoid repeated explanations across passages, stage directions and filler. Preserve material risks, exclusions, quantities and uncertainty.`,
     compose(raw: unknown): Dialogue {
       const parsed = schema.safeParse(raw);
       if (!parsed.success)
