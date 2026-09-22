@@ -133,3 +133,7 @@ The installer does not edit shell profiles, replace unrelated commands, publish 
 - A synthetic plain-text article produced a 125.0-second local Jane/George briefing. Script, audio, and normalized-source hashes matched the sidecar. The script retained the fictional-study qualifier, sampling caveats, and uncertainty and did not invent a next action. This is a smoke check, not a broad quality benchmark.
 - The 0.2.0 standalone archive was installed locally and exercised with its private Node runtime and system-only PATH. Plain text and the existing 17-page PRD PDF passed dry-run extraction; PDF extraction required no external utilities.
 - The public GitHub release and Homebrew formula remain at 0.1.0. Scanned PDFs/OCR, password-protected PDFs, authenticated webpages, and JavaScript-rendered articles are outside this implementation.
+
+## Gemini provider (0.3.0 prerelease)
+
+124 tests pass with build and lint. Gemini tests cover separate configuration, header-based credentials, structured evidence/composition, exact PCM bytes, voice routing and manifest identity, missing-key rejection, cloud acknowledgement denial, dry-run without credentials, transient retry limits, cancellation, error redaction, and malformed/blocked/incomplete/audio-format failures. Tests use mocked responses and make no paid requests. No GEMINI_API_KEY was available for a live generation or listening check; model availability, end-to-end duration, and voice quality remain unverified. The 0.3.0 prerelease includes this provider with the live-validation limitation disclosed.

@@ -289,3 +289,7 @@ Defer these until the vertical slice is repeatedly useful:
 `readSource` normalizes Markdown, UTF-8 text, public HTML articles, and text-based PDFs into the same line-indexed `Source`. Non-Markdown inputs use topic/argument/evidence semantics within the existing typed evidence slots; absent next actions remain null. The manifest retains extracted text and PDF page ranges for reproducible grounding.
 
 URL extraction uses Mozilla Readability and inert jsdom documents. The downloader pins a validated public DNS address to each socket and revalidates every redirect, with download bounds and no page-script execution or embedded-resource loading. PDF.js extracts local text without OCR or password prompts. No extra manually installed tools are required. `--dry-run` never fetches URLs.
+
+## Gemini cloud provider (0.3.0 prerelease)
+
+`--provider gemini` selects the typed Gemini script/speech pair with `GEMINI_API_KEY`. Dedicated `PLANCAST_GEMINI_*` settings keep models/voices separate from OpenAI and local defaults. Calls use Google's documented generateContent endpoint with structured JSON for evidence/passages, and audio generation per turn. Local grounding validation precedes speech. The adapter validates complete responses and mono 24 kHz signed 16-bit PCM, caps response sizes, prevents redirects, bounds transient retries to two, redacts provider errors, and honors interruption. Consent and billing disclosure name Google; there is no automatic fallback. No live API check was performed without a Gemini key.

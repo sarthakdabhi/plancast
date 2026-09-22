@@ -4,7 +4,7 @@
 
 **Turn documents and public articles into two-person audio briefings—then listen at your own pace.**
 
-Plancast accepts **Markdown, plain-text files, public article URLs, and text-based PDFs**. It extracts the content, writes a grounded conversation, and creates an audio briefing with two distinct AI voices: Jane and George. Dialogue and speech generation run locally on your Mac by default. OpenAI is available as an explicit alternative.
+Plancast accepts **Markdown, plain-text files, public article URLs, and text-based PDFs**. It extracts the content, writes a grounded conversation, and creates an audio briefing with two distinct AI voices: Jane and George. Dialogue and speech generation run locally on your Mac by default. OpenAI is available as an explicit alternative; Google Gemini is also available for dialogue and speech.
 
 ```sh
 plancast PLAN.md --play                         # Markdown plan
@@ -39,6 +39,7 @@ Word documents (`.docx`), saved HTML files, scanned PDFs/OCR, password-protected
 - [Choose and download a model](#choose-and-download-a-model)
 - [Choose voices](#choose-voices)
 - [Use OpenAI instead](#use-openai-instead)
+- [Use Google Gemini](#use-google-gemini)
 - [Listen in your browser](#listen-in-your-browser)
 - [Files and storage](#files-and-storage)
 - [Configuration reference](#configuration-reference)
@@ -62,17 +63,17 @@ Or install directly without Homebrew:
 
 The standalone Apple Silicon archive includes its own **Node.js 24.21.0** runtime. You do not need Homebrew, npm, Node, uv, Python, FFmpeg, Ollama, or LM Studio installed separately.
 
-Download the archive and checksum from [GitHub Releases](https://github.com/sarthakdabhi/plancast/releases/tag/v0.2.0), then run:
+Download the archive and checksum from [GitHub Releases](https://github.com/sarthakdabhi/plancast/releases/tag/v0.3.0), then run:
 
 ```sh
-shasum -a 256 -c plancast-0.2.0-macos-arm64.tar.gz.sha256
-tar -xzf plancast-0.2.0-macos-arm64.tar.gz
-sh plancast-0.2.0-macos-arm64/install.command
+shasum -a 256 -c plancast-0.3.0-macos-arm64.tar.gz.sha256
+tar -xzf plancast-0.3.0-macos-arm64.tar.gz
+sh plancast-0.3.0-macos-arm64/install.command
 ```
 
 The installer verifies file checksums, installs into `~/.local/share/plancast/cli/`, and creates `~/.local/bin/plancast`. It requires no administrator access and does not modify your shell configuration or replace unrelated commands.
 
-Version 0.2.0 is an early prerelease. The archive is not a notarized installer. See [Development](#development) to build an archive or install from source. Apple Silicon is the validated target; Intel packaging and speech support remain unverified.
+Version 0.3.0 is an early prerelease. The archive is not a notarized installer. See [Development](#development) to build an archive or install from source. Apple Silicon is the validated target; Intel packaging and speech support remain unverified.
 
 ### 2. Make the command available
 
@@ -140,7 +141,7 @@ plancast report.pdf --play
 | Public HTTP(S) article URL | Main readable HTML content; up to 3 MB downloaded HTML, five redirects, 30-second download timeout |
 | Local `.pdf` | Text-based, unencrypted PDF, up to 20 MB and 200 pages; 30-second extraction timeout |
 
-Article and PDF extraction happens locally. Fetching a URL contacts the website from your Mac; it does not send the article to a cloud AI service unless you explicitly choose OpenAI. URL requests do not use browser cookies, execute page scripts, or load embedded resources. Local/private addresses, credentials in URLs, and custom ports are rejected. Login-protected, paywalled, or JavaScript-only content may not extract; save readable text as `.txt` instead. Remote PDF URLs are not supported: download the PDF and pass its local path.
+Article and PDF extraction happens locally. Fetching a URL contacts the website from your Mac; it does not send the article to a cloud AI service unless you explicitly choose OpenAI or Gemini. URL requests do not use browser cookies, execute page scripts, or load embedded resources. Local/private addresses, credentials in URLs, and custom ports are rejected. Login-protected, paywalled, or JavaScript-only content may not extract; save readable text as `.txt` instead. Remote PDF URLs are not supported: download the PDF and pass its local path.
 
 Scanned PDFs need OCR, which is not included. A PDF with a page containing no extractable text is rejected rather than silently dropping that page. Complex columns, tables, or unusual fonts can produce imperfect reading order. Extracted text is limited to 2 MB, and the local model's 65,000-character structured input limit still applies. Split long documents; content is never silently truncated to fit.
 
@@ -303,7 +304,42 @@ The CLI displays a disclosure and asks for confirmation. For automation, acknowl
 plancast PLAN.md --provider openai --yes --output PLAN-openai.m4a --json
 ```
 
-No key or `--yes` is required for local mode. Neither provider silently falls back to the other. Mixed local/cloud stages are not currently selectable.
+No key or `--yes` is required for local mode. No provider silently falls back to another. Mixed local/cloud stages are not currently selectable. The Gemini option below uses Google for both stages.
+
+## Use Google Gemini
+
+**Available in Plancast 0.3.0 through Homebrew and the standalone archive.** Update with `brew update && brew upgrade plancast`.
+
+Gemini writes the dialogue and Gemini TTS voices it. It works with the same Markdown, plain-text, article URL, and PDF inputs. Local extraction, grounding checks, audio assembly, and playback are unchanged. No local model download is needed for Gemini mode.
+
+Create an API key in [Google AI Studio](https://aistudio.google.com/apikey), then set it in your shell (do not commit or share it):
+
+```sh
+export GEMINI_API_KEY="your-api-key"
+plancast article.txt --provider gemini --play
+plancast report.pdf --provider gemini --play
+plancast "https://example.com/article" --provider gemini --output ./briefing.m4a --play
+```
+
+**The extracted source content goes to Google for dialogue generation, and dialogue text goes to Google for speech synthesis. Your API account pays for applicable usage.** Plancast asks for confirmation before contacting Google's models. `--yes` acknowledges this disclosure for automation. This uses the Gemini API, not the Gemini consumer chat subscription. Review Google's current API pricing and data terms for your account/tier.
+
+Defaults are **`gemini-3.8-flash`** for dialogue, **`gemini-3.1-flash-tts-preview`** for speech, and **Kore / Puck** for the two hosts. These defaults follow Google's current API examples; live generation and voice quality have not yet been verified in this project. Gemini TTS is a preview service, so availability and limits can change. Each turn is synthesized separately and then assembled locally, as with our OpenAI provider. Jane and George remain local Pocket TTS voices.
+
+Override Gemini settings independently of OpenAI:
+
+```sh
+export PLANCAST_GEMINI_VOICE_A="Aoede"
+export PLANCAST_GEMINI_VOICE_B="Charon"
+plancast article.txt --provider gemini --play
+```
+
+Use `PLANCAST_GEMINI_SCRIPT_MODEL` and `PLANCAST_GEMINI_SPEECH_MODEL` for other compatible Gemini models. Model access depends on your key and account; no provider silently falls back to another. Voice names are case-sensitive, must be distinct, and must be among Google's supported presets. See [Google's TTS voices](https://ai.google.dev/gemini-api/docs/generate-content/speech-generation#voice-options) and [structured output documentation](https://ai.google.dev/gemini-api/docs/generate-content/structured-output).
+
+Inspect configuration without a key or model request:
+
+```sh
+plancast article.txt --provider gemini --dry-run --json
+```
 
 ## Listen in your browser
 
@@ -358,17 +394,22 @@ Temporary generation files are removed after success or failure. `--debug` retai
 
 | Setting | Default | Applies to |
 | --- | --- | --- |
-| `PLANCAST_PROVIDER` | `local` | Provider selection; `--provider` takes precedence |
+| `PLANCAST_PROVIDER` | `local` | `local`, `openai`, or `gemini`; `--provider` takes precedence |
 | `PLANCAST_LOCAL_SCRIPT_MODEL` | `qwen3:14b` | Local writing model |
 | `PLANCAST_LOCAL_VOICE_A` | `jane` | Local Host A |
 | `PLANCAST_LOCAL_VOICE_B` | `george` | Local Host B |
+| `GEMINI_API_KEY` | None | Required for Gemini generation |
+| `PLANCAST_GEMINI_SCRIPT_MODEL` | `gemini-3.8-flash` | Gemini writing model |
+| `PLANCAST_GEMINI_SPEECH_MODEL` | `gemini-3.1-flash-tts-preview` | Gemini speech model |
+| `PLANCAST_GEMINI_VOICE_A` | `Kore` | Gemini Host A |
+| `PLANCAST_GEMINI_VOICE_B` | `Puck` | Gemini Host B |
 | `OPENAI_API_KEY` | None | Required for OpenAI generation |
 | `PLANCAST_SCRIPT_MODEL` | `gpt-4.1-mini` | OpenAI writing model |
 | `PLANCAST_SPEECH_MODEL` | `gpt-4o-mini-tts` | OpenAI speech model |
 | `PLANCAST_VOICE_A` | `alloy` | OpenAI Host A |
 | `PLANCAST_VOICE_B` | `nova` | OpenAI Host B |
 
-Local and OpenAI voice settings are separate. Changing an OpenAI model requires compatibility with the adapter's structured-output or speech API contract. Available OpenAI voices also depend on the selected speech model.
+Local, OpenAI, and Gemini voice settings are separate. Changing an OpenAI model requires compatibility with the adapter's structured-output or speech API contract. Available OpenAI voices also depend on the selected speech model.
 
 Inspect the selected configuration without generating audio:
 

@@ -8,6 +8,7 @@ import {
   scriptText,
   wordCount,
 } from "./dialogue/validate.js";
+import { geminiProviders } from "./providers/gemini.js";
 import { config } from "./config.js";
 import { openaiProviders, PROMPT_VERSION } from "./providers/openai.js";
 import { llamaScript, LOCAL_PROMPT_VERSION } from "./providers/llama.js";
@@ -99,6 +100,9 @@ export async function generate(
     : source.path.slice(0, -extname(source.path).length);
   const settings = config(process.env, options.provider);
   const local = settings.provider === "local";
+  const gemini = settings.provider === "gemini";
+  const cloudName = gemini ? "Google Gemini" : "OpenAI";
+  const keyName = gemini ? "GEMINI_API_KEY" : "OPENAI_API_KEY";
   const audioPath = resolve(options.output ?? defaultStem + ".plancast.m4a");
   if (extname(audioPath).toLowerCase() !== ".m4a")
     throw new PlancastError("ARGUMENT", "--output must end in .m4a.", 2);
@@ -109,8 +113,8 @@ export async function generate(
     sourcePath: source.path,
     sourceKind: source.kind ?? "markdown",
     targetLength: "2m",
-    scriptProvider: local ? "llama.cpp" : "openai",
-    speechProvider: local ? "pocket-tts" : "openai",
+    scriptProvider: local ? "llama.cpp" : settings.provider,
+    speechProvider: local ? "pocket-tts" : settings.provider,
     ...settings,
     contentLeavesMac: !local,
     outputPath: audioPath,
@@ -120,10 +124,10 @@ export async function generate(
   interrupted(signal);
   const audio = dependencies.audio ?? localAudio;
   await audio.preflight();
-  if (!local && !dependencies.providers && !process.env.OPENAI_API_KEY)
+  if (!local && !dependencies.providers && !process.env[keyName]?.trim())
     throw new PlancastError(
       "CREDENTIALS",
-      "Set OPENAI_API_KEY in your environment before generating. --dry-run needs no key.",
+      `Set ${keyName} in your environment before generating. --dry-run needs no key.`,
       3,
     );
   if (local)
@@ -132,7 +136,7 @@ export async function generate(
     );
   else
     log(
-      "Cloud disclosure: source content leaves this Mac for OpenAI script generation; dialogue text goes to OpenAI speech synthesis. Your API account pays for usage. Voices are AI-generated.",
+      `Cloud disclosure: source content leaves this Mac for ${cloudName} script generation; dialogue text goes to ${cloudName} speech synthesis. Your API account pays for usage. Voices are AI-generated.`,
     );
   if (!local && !options.yes) {
     const acknowledge =
@@ -165,8 +169,8 @@ export async function generate(
           script: llamaScript(settings.scriptModel, fetch, log),
           speech: pocketSpeech(),
         }
-      : openaiProviders(
-          process.env.OPENAI_API_KEY!,
+      : (gemini ? geminiProviders : openaiProviders)(
+          process.env[keyName]!,
           settings.scriptModel,
           settings.speechModel,
         ));

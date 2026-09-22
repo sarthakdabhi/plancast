@@ -287,6 +287,75 @@ describe("pipeline safety", () => {
       JSON.parse(await readFile(join(dir, "plan.plancast.json"), "utf8")),
     ).toMatchObject({ speed: 0.85, actualDurationSeconds: 117.5 });
   });
+  it("Gemini disclosure names Google and denial blocks both providers", async () => {
+    const { dir, path } = await fixture();
+    const deps = dependencies(dir);
+    const log = vi.fn();
+    await expect(
+      generate(path, { length: "2m", provider: "gemini" }, signal(), {
+        ...deps,
+        log,
+        acknowledge: async () => false,
+      }),
+    ).rejects.toMatchObject({ code: "ACKNOWLEDGEMENT" });
+    expect(log.mock.calls.flat().join(" ")).toContain("Google Gemini");
+    expect(deps.providers.script.generateDialogue).not.toHaveBeenCalled();
+    expect(deps.providers.speech.synthesize).not.toHaveBeenCalled();
+  });
+  it("Gemini dry-run needs no key and reports Gemini models and voices", async () => {
+    vi.stubEnv("GEMINI_API_KEY", "");
+    const { path } = await fixture();
+    const result = await generate(
+      path,
+      { length: "2m", provider: "gemini", dryRun: true },
+      signal(),
+    );
+    expect(result).toMatchObject({
+      scriptProvider: "gemini",
+      speechProvider: "gemini",
+      contentLeavesMac: true,
+      voiceA: "Kore",
+      voiceB: "Puck",
+    });
+  });
+  it("Gemini rejects missing credentials without falling back to OpenAI", async () => {
+    vi.stubEnv("GEMINI_API_KEY", "");
+    vi.stubEnv("OPENAI_API_KEY", "not-a-gemini-key");
+    const { path, dir } = await fixture();
+    await expect(
+      generate(
+        path,
+        { length: "2m", provider: "gemini", yes: true },
+        signal(),
+        { audio: dependencies(dir).audio },
+      ),
+    ).rejects.toThrow("Set GEMINI_API_KEY");
+  });
+  it("Gemini routes selected voices and persists the provider identity", async () => {
+    const { path, dir } = await fixture();
+    const deps = dependencies(dir);
+    deps.providers.script.id = "gemini";
+    deps.providers.speech.id = "gemini";
+    const result = await generate(
+      path,
+      { length: "2m", provider: "gemini", yes: true },
+      signal(),
+      deps,
+    );
+    expect(
+      deps.providers.speech.synthesize.mock.calls.map(
+        (c) => (c as unknown as [{ voice: string }])[0].voice,
+      ),
+    ).toEqual(["Kore", "Puck", "Kore", "Puck"]);
+    expect(
+      JSON.parse(await readFile(result.manifestPath!, "utf8")),
+    ).toMatchObject({
+      scriptProvider: "gemini",
+      speechProvider: "gemini",
+      voiceA: "Kore",
+      voiceB: "Puck",
+    });
+  });
   it("denied disclosure prevents all remote requests", async () => {
     const { dir, path } = await fixture();
     const deps = dependencies(dir);

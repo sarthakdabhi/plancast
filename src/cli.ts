@@ -7,7 +7,7 @@ process.once("SIGINT", stop);
 process.once("SIGTERM", stop);
 const program = new Command()
   .name("plancast")
-  .version("0.2.0")
+  .version("0.3.0")
   .description(
     "Turn documents and public articles into grounded two-host audio briefings",
   )
@@ -17,7 +17,7 @@ const program = new Command()
   )
   .option(
     "--provider <provider>",
-    "Generation provider: local (default) or openai",
+    "Generation provider: local (default), openai, or gemini",
   )
   .option("--length <length>", "Briefing length (2m supported)", "2m")
   .option("--output <path>", "Destination M4A file")
@@ -25,7 +25,7 @@ const program = new Command()
   .option("--force", "Replace existing output and sidecars")
   .option(
     "--yes",
-    "Acknowledge sending plan/dialogue to OpenAI and API charges",
+    "Acknowledge sending source/dialogue to the selected cloud provider and API charges",
   )
   .option("--dry-run", "Validate locally without network requests or writes")
   .option("--json", "Machine-readable stdout; progress goes to stderr")
