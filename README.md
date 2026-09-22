@@ -43,17 +43,17 @@ Or install directly without Homebrew:
 
 The standalone Apple Silicon archive includes its own **Node.js 24.21.0** runtime. You do not need Homebrew, npm, Node, uv, Python, FFmpeg, Ollama, or LM Studio installed separately.
 
-Download the archive and checksum from [GitHub Releases](https://github.com/sarthakdabhi/plancast/releases/tag/v0.1.0), then run:
+Download the archive and checksum from [GitHub Releases](https://github.com/sarthakdabhi/plancast/releases/tag/v0.2.0), then run:
 
 ```sh
-shasum -a 256 -c plancast-0.1.0-macos-arm64.tar.gz.sha256
-tar -xzf plancast-0.1.0-macos-arm64.tar.gz
-sh plancast-0.1.0-macos-arm64/install.command
+shasum -a 256 -c plancast-0.2.0-macos-arm64.tar.gz.sha256
+tar -xzf plancast-0.2.0-macos-arm64.tar.gz
+sh plancast-0.2.0-macos-arm64/install.command
 ```
 
 The installer verifies file checksums, installs into `~/.local/share/plancast/cli/`, and creates `~/.local/bin/plancast`. It requires no administrator access and does not modify your shell configuration or replace unrelated commands.
 
-Version 0.1.0 is an early prerelease. The archive is not a notarized installer. See [Development](#development) to build an archive or install from source. Apple Silicon is the validated target; Intel packaging and speech support remain unverified.
+Version 0.2.0 is an early prerelease. The archive is not a notarized installer. See [Development](#development) to build an archive or install from source. Apple Silicon is the validated target; Intel packaging and speech support remain unverified.
 
 ### 2. Make the command available
 
@@ -103,7 +103,7 @@ For a standalone upgrade, extract the new archive and rerun its `install.command
 
 ## Additional input formats
 
-**Available in the 0.2.0 development build. The published 0.1.0 archive and Homebrew formula still accept Markdown only.** Build this checkout with `npm ci && npm run build`; use `node dist/cli.js` in place of `plancast` below, or build a standalone archive with `npm run package:standalone`.
+Available in **Plancast 0.2.0** through Homebrew and the standalone archive. Existing Homebrew users can update with `brew update && brew upgrade plancast`.
 
 ```sh
 plancast article.txt --play
@@ -384,7 +384,7 @@ Exit codes: `0` success, `1` unexpected local failure, `2` input/arguments, `3` 
 ## Limits and privacy
 
 - **Two-minute mode only:** `2m` is the default and targets 110–140 seconds. Five-minute mode is not implemented.
-- **Input:** Markdown/text up to 2 MB; development builds also support public article URLs and text-based PDFs as described above. Local generation additionally limits the structured source payload to 65,000 characters and requests a 32K model context.
+- **Input:** Markdown/text up to 2 MB; also supports public article URLs and text-based PDFs as described above. Local generation additionally limits the structured source payload to 65,000 characters and requests a 32K model context.
 - **Language and hardware:** English and an Apple M2 Max with 64 GB have been exercised. Smaller Macs, Intel Macs, and other languages have not been comprehensively validated.
 - **Local content stays local:** setup downloads software and model assets; subsequent local generation processes the plan on this Mac. The speech worker disables networking; llama.cpp uses offline mode and a local model file. No automatic cloud fallback or Plancast telemetry is added.
 - **Validation has limits:** source quotations, references, required topics, word budgets, and audio duration are checked. Those checks cannot prove every paraphrase is true or catch every omission. Review the transcript for important decisions.
