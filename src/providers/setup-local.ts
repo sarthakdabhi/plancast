@@ -7,7 +7,6 @@ import {
 import { setupLlama } from "../runtime/assets.js";
 import { spawn } from "node:child_process";
 import { access } from "node:fs/promises";
-import { config } from "../config.js";
 import {
   pocketDirectory,
   pocketPython,
@@ -15,7 +14,7 @@ import {
   POCKET_VERSION,
 } from "./pocket.js";
 import { PlancastError, interrupted } from "../domain/errors.js";
-export async function setupLocal(signal: AbortSignal) {
+export async function installLocal(model: string, signal: AbortSignal) {
   const run = async (command: string, args: string[], inherit = true) => {
     interrupted(signal);
     await new Promise<void>((resolve, reject) => {
@@ -51,7 +50,7 @@ export async function setupLocal(signal: AbortSignal) {
   );
   await setupTools(signal);
   const uv = toolAsset("uv").path;
-  await setupLlama(config(process.env, "local").scriptModel, signal);
+  await setupLlama(model, signal);
   if (
     !(await access(pocketPython()).then(
       () => true,
@@ -73,7 +72,5 @@ export async function setupLocal(signal: AbortSignal) {
     `pocket-tts==${POCKET_VERSION}`,
   ]);
   await run(pocketPython(), [pocketWorker(), "--download"], false);
-  process.stderr.write(
-    "Local models and voices are ready. Run plancast PLAN.md --play.\n",
-  );
+  process.stderr.write("Local models and voices are ready.\n");
 }

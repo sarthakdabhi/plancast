@@ -137,3 +137,7 @@ The installer does not edit shell profiles, replace unrelated commands, publish 
 ## Gemini provider (0.3.0 prerelease)
 
 124 tests pass with build and lint. Gemini tests cover separate configuration, header-based credentials, structured evidence/composition, exact PCM bytes, voice routing and manifest identity, missing-key rejection, cloud acknowledgement denial, dry-run without credentials, transient retry limits, cancellation, error redaction, and malformed/blocked/incomplete/audio-format failures. Tests use mocked responses and make no paid requests. No GEMINI_API_KEY was available for a live generation or listening check; model availability, end-to-end duration, and voice quality remain unverified. The 0.3.0 prerelease includes this provider with the live-validation limitation disclosed.
+
+## Writing-model picker (0.4.0 prerelease)
+
+Build, lint, and all 132 tests pass. Eight setup tests cover menu selection and invalid input, persistent choice and environment precedence, failure/interruption preservation, invalid models, non-interactive requirements, --yes defaults, and malformed-settings recovery with cloud isolation. Terminal checks confirmed invalid-input retry, Ctrl-C and EOF cancellation with exit 130, and non-interactive refusal with exit 2 before downloads. Existing models and speech adapters are unchanged; smaller models remain unbenchmarked.
