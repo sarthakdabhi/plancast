@@ -120,9 +120,7 @@ export function validateDialogue(
   }
   if (!d.summary.problem.trim() || !d.summary.proposal.trim())
     fail(
-      source.kind && source.kind !== "markdown"
-        ? "Source must support a topic and central argument or finding."
-        : "Source must support a problem and proposal.",
+      "Source must support a topic and main idea, finding, event, or proposal.",
     );
   const words = wordCount(d.turns.map((t) => t.text).join(" "));
   if (words < targetWords * 0.85 || words > targetWords * 1.15)

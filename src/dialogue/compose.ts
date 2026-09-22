@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { type Dialogue, type categories, wordCount } from "./validate.js";
+import type { Framing } from "../providers/contracts.js";
+import { type Dialogue, type categories } from "./validate.js";
 import { PlancastError } from "../domain/errors.js";
 type Category = (typeof categories)[number];
 export type Evidence = Pick<Dialogue, "summary" | "facts">;
@@ -10,30 +11,25 @@ export function dialogueComposer(
   evidence: Evidence,
   targetWords: number,
   strictPassageLengths = true,
-  document = false,
+  framing: Framing = "auto",
 ) {
-  const opening = document
-    ? "What is this about, and what does the source say?"
-    : "What's the problem, and what's proposed?";
-  const details = document
-    ? "What happens, and what are the limitations?"
-    : "How will it work, and what could go wrong?";
+  type PassageKey = Category | "recap";
+  const groups: {
+    id: "opening" | "details" | "uncertainty" | "recap";
+    keys: PassageKey[];
+  }[] = [
+    { id: "opening", keys: ["problem", "proposal", "rationale"] },
+    { id: "details", keys: ["stages", "risks"] },
+    { id: "uncertainty", keys: ["uncertainty", "openQuestions"] },
+    { id: "recap", keys: ["recap", "nextAction"] },
+  ];
+  const activeGroups = groups.filter((group) =>
+    group.keys.some((key) => key === "recap" || evidence.summary[key].trim()),
+  );
   const presentCount =
     Object.values(evidence.summary).filter((value) => value.trim()).length + 1;
-  const questionWords =
-    wordCount(opening) +
-    (evidence.summary.stages.trim() || evidence.summary.risks.trim()
-      ? wordCount(details)
-      : 0) +
-    (evidence.summary.uncertainty.trim() ||
-    evidence.summary.openQuestions.trim()
-      ? wordCount("What remains uncertain?")
-      : 0) +
-    wordCount(
-      evidence.summary.nextAction.trim()
-        ? "What's the takeaway and the next action?"
-        : "What's the takeaway?",
-    );
+  // Reserve the maximum question length so tailored questions fit the total budget.
+  const questionWords = activeGroups.length * 12;
   const passageWords = Math.min(
     Math.floor((targetWords - questionWords) / presentCount),
     Math.floor(
@@ -41,9 +37,15 @@ export function dialogueComposer(
         presentCount,
     ),
   );
-  const minWords = Math.max(
-    1,
-    Math.ceil((Math.ceil(targetWords * 0.85) - questionWords) / presentCount),
+  const minWords = Math.min(
+    passageWords,
+    Math.max(
+      1,
+      Math.ceil(
+        (Math.ceil(targetWords * 0.85) - activeGroups.length * 4) /
+          presentCount,
+      ),
+    ),
   );
   const passage = (ids: string[]) =>
     z
@@ -84,8 +86,25 @@ export function dialogueComposer(
       "No source evidence is available.",
       4,
     );
+  const question = (id: (typeof groups)[number]["id"]) =>
+    activeGroups.some((group) => group.id === id)
+      ? z
+          .string()
+          .regex(/^[^ \t\r\n"\\]+( [^ \t\r\n"\\]+){3,11}\?$/)
+          .describe(
+            "One source-grounded question, 4–12 space-separated words, ending with a question mark.",
+          )
+      : z.null();
   const schema = z
     .object({
+      questions: z
+        .object({
+          opening: question("opening"),
+          details: question("details"),
+          uncertainty: question("uncertainty"),
+          recap: question("recap"),
+        })
+        .strict(),
       problem: slot("problem"),
       proposal: slot("proposal"),
       rationale: slot("rationale"),
@@ -97,35 +116,10 @@ export function dialogueComposer(
       recap: passage(allIds),
     })
     .strict();
-  type Draft = z.infer<typeof schema>;
-  const groups: { question: string; keys: (keyof Draft)[] }[] = [
-    {
-      question: opening,
-      keys: ["problem", "proposal", "rationale"],
-    },
-    {
-      question: details,
-      keys: ["stages", "risks"],
-    },
-    {
-      question: "What remains uncertain?",
-      keys: ["uncertainty", "openQuestions"],
-    },
-    {
-      question: evidence.summary.nextAction.trim()
-        ? "What's the takeaway and the next action?"
-        : "What's the takeaway?",
-      keys: ["recap", "nextAction"],
-    },
-  ];
-  const activeGroups = groups.filter((group) =>
-    group.keys.some((key) => key === "recap" || evidence.summary[key].trim()),
-  );
-  const bodyWords =
-    targetWords - activeGroups.reduce((n, g) => n + wordCount(g.question), 0);
+  const bodyWords = targetWords - questionWords;
   return {
     schema,
-    instructions: `Write complete grammatical sentences for each required topic, using only its evidence. Null topics are absent and must stay null. Each passage's factId must support its text; select the strongest matching fact. Never put IDs or citations in text. Keep interpretations explicitly qualified, and use interpretation=false for direct source paraphrases. The passages will be assembled locally into a two-host dialogue with fixed short questions. ALL passage texts combined must total approximately ${bodyWords} words, within 10%; this is one briefing, not that many words per topic. Each non-null passage MUST contain ${minWords}–${passageWords} words; these per-field limits include recap and nextAction. ${document ? "Recap restates the central argument and evidence. Only discuss next actions explicitly recommended by the source; never invent an action for an article." : "Recap restates the proposal and rationale briefly. Put the concrete immediate next action in nextAction."} Summarize at a high level when needed; never begin a list item or sentence you cannot finish within the limit. In stages, summarize the sequence rather than enumerating every phase. Avoid repeated explanations across passages, stage directions and filler. Preserve material risks, exclusions, quantities and uncertainty.`,
+    instructions: `Write complete grammatical sentences for each required topic, using only its evidence. Null topics are absent and must stay null. Each passage's factId must support its text; select the strongest matching fact. Never put IDs or citations in text. Keep interpretations explicitly qualified, and use interpretation=false for direct source paraphrases. Write a tailored question for each active group in questions: opening covers topic and main ideas; details covers supported sequence and limitations; uncertainty covers unresolved issues; recap invites the takeaway and any explicit next action. Each question must be 4–12 words and answerable from that group’s evidence. Never smuggle unsupported claims, false premises, or implied recommendations into a question. Use null for inactive groups. These questions and passages will be assembled locally into an alternating two-host dialogue. ALL passage texts combined must total approximately ${bodyWords} words, within 10%; this is one briefing, not that many words per topic. Each non-null passage MUST contain ${minWords}–${passageWords} words; these per-field limits include recap and nextAction. ${framing === "plan" ? "Recap restates the source-supported proposal and rationale." : "Recap restates the central ideas, findings, events, or proposal and supporting evidence."} Only discuss next actions explicitly stated in the source; never invent an action. Summarize at a high level when needed; never begin a list item or sentence you cannot finish within the limit. In stages, summarize the sequence rather than enumerating every phase. Avoid repeated explanations across passages, stage directions and filler. Preserve material risks, exclusions, quantities and uncertainty.`,
     compose(raw: unknown): Dialogue {
       const parsed = schema.safeParse(raw);
       if (!parsed.success)
@@ -149,7 +143,7 @@ export function dialogueComposer(
         const factIds = [...new Set(passages.map((p) => p.factId))];
         turns.push({
           speaker: "HOST_A",
-          text: group.question,
+          text: draft.questions[group.id]!,
           factIds,
           interpretation: false,
         });

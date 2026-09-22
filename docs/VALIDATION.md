@@ -141,3 +141,13 @@ The installer does not edit shell profiles, replace unrelated commands, publish 
 ## Writing-model picker (0.4.0 prerelease)
 
 Build, lint, and all 132 tests pass. Eight setup tests cover menu selection and invalid input, persistent choice and environment precedence, failure/interruption preservation, invalid models, non-interactive requirements, --yes defaults, and malformed-settings recovery with cloud isolation. Terminal checks confirmed invalid-input retry, Ctrl-C and EOF cancellation with exit 130, and non-interactive refusal with exit 2 before downloads. Existing models and speech adapters are unchanged; smaller models remain unbenchmarked.
+
+## Content-based framing (0.5.0 prerelease)
+
+Build, lint, and all 140 tests pass. Regression coverage verifies identical content-based prompts for Markdown, text, PDF, and URL sources; source-specific host questions; preservation of explicit plan actions; plan/document overrides; framing preflight and manifest metadata; invalid-option rejection before input I/O; and question/passage limits. All cloud-provider tests remain mocked.
+
+A local Qwen3 14B script check used the feature-plan fixture as plain text in auto mode. The generated dialogue passed reference, coverage, and word-budget validation and retained the explicit prototype next action. Transcript inspection confirmed plan content is still discussed as a plan without relying on a Markdown extension. This is a focused regression check, not a broad semantic benchmark.
+
+Live testing exposed both timing drift and clipped sentence endings under strict per-sentence grammar constraints. Local explanations keep natural sentence generation with word-count guidance; only the short host-question shape is constrained with runtime-compatible patterns. The initial local target is now 280 words, matching cloud generation. Final word-budget and duration checks remain mandatory; invalid scripts never reach speech synthesis.
+
+The final live article check used the fictional research fixture saved as Markdown, auto framing, Qwen3 14B, and the 280-word target. Its 285-word transcript was inspected before passing that exact real-model draft through the generation pipeline with Pocket TTS. It preserved the fictional-pilot qualification, self-report/non-random-sample limitations, lack of engineering-decision evidence, and exclusion of audio from the study; no project plan or next action was invented. Jane/George audio passed at 120.00375 seconds after one 0.85× pitch-preserving pace adjustment. Audio/script hashes, Markdown source kind, auto framing, and dialogue-v9-llama-v1 metadata matched. This was a staged local model-to-audio check; no cloud calls or broad model/voice-quality benchmark was performed.

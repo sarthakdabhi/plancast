@@ -7,7 +7,7 @@ process.once("SIGINT", stop);
 process.once("SIGTERM", stop);
 const program = new Command()
   .name("plancast")
-  .version("0.4.0")
+  .version("0.5.0")
   .description(
     "Turn documents and public articles into grounded two-host audio briefings",
   )
@@ -18,6 +18,11 @@ const program = new Command()
   .option(
     "--provider <provider>",
     "Generation provider: local (default), openai, or gemini",
+  )
+  .option(
+    "--framing <mode>",
+    "Conversation framing: auto (content-based), plan, or document",
+    "auto",
   )
   .option("--length <length>", "Briefing length (2m supported)", "2m")
   .option("--output <path>", "Destination M4A file")

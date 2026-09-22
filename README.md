@@ -21,7 +21,7 @@ Replace the example filenames or URL with your own source. Fetching an article c
 
 | Source | Examples | How Plancast handles it |
 | --- | --- | --- |
-| **Markdown** (`.md`, `.markdown`) | PRDs, implementation plans, migration proposals | Explains the proposal, rationale, risks, uncertainty, and next action |
+| **Markdown** (`.md`, `.markdown`) | Articles, notes, PRDs, implementation plans | Explains the source’s ideas and evidence; preserves proposals and explicit next steps when present |
 | **Plain text** (`.txt`) | Saved articles, notes, reports | Explains the main argument or findings, evidence, and caveats |
 | **Public article links** (`http://` or `https://`) | Blog posts, essays, readable web articles | Extracts the main article without executing scripts or loading embedded resources |
 | **Text-based PDFs** (`.pdf`) | Reports, papers, exported documents | Extracts text locally and retains page-to-line references |
@@ -35,6 +35,7 @@ Word documents (`.docx`), saved HTML files, scanned PDFs/OCR, password-protected
 - [What you can listen to](#what-you-can-listen-to)
 - [Quick start](#quick-start)
 - [Supported inputs and limits](#supported-inputs-and-limits)
+- [Conversation framing](#conversation-framing)
 - [Everyday commands](#everyday-commands)
 - [Choose and download a model](#choose-and-download-a-model)
 - [Choose voices](#choose-voices)
@@ -63,17 +64,17 @@ Or install directly without Homebrew:
 
 The standalone Apple Silicon archive includes its own **Node.js 24.21.0** runtime. You do not need Homebrew, npm, Node, uv, Python, FFmpeg, Ollama, or LM Studio installed separately.
 
-Download the archive and checksum from [GitHub Releases](https://github.com/sarthakdabhi/plancast/releases/tag/v0.4.0), then run:
+Download the archive and checksum from [GitHub Releases](https://github.com/sarthakdabhi/plancast/releases/tag/v0.5.0), then run:
 
 ```sh
-shasum -a 256 -c plancast-0.4.0-macos-arm64.tar.gz.sha256
-tar -xzf plancast-0.4.0-macos-arm64.tar.gz
-sh plancast-0.4.0-macos-arm64/install.command
+shasum -a 256 -c plancast-0.5.0-macos-arm64.tar.gz.sha256
+tar -xzf plancast-0.5.0-macos-arm64.tar.gz
+sh plancast-0.5.0-macos-arm64/install.command
 ```
 
 The installer verifies file checksums, installs into `~/.local/share/plancast/cli/`, and creates `~/.local/bin/plancast`. It requires no administrator access and does not modify your shell configuration or replace unrelated commands.
 
-Version 0.4.0 is an early prerelease. The archive is not a notarized installer. See [Development](#development) to build an archive or install from source. Apple Silicon is the validated target; Intel packaging and speech support remain unverified.
+Version 0.5.0 is an early prerelease. The archive is not a notarized installer. See [Development](#development) to build an archive or install from source. Apple Silicon is the validated target; Intel packaging and speech support remain unverified.
 
 ### 2. Make the command available
 
@@ -138,7 +139,7 @@ plancast report.pdf --play
 
 | Input | Support and limits |
 | --- | --- |
-| `.md`, `.markdown` | UTF-8 Markdown, up to 2 MB; existing plan briefing behavior |
+| `.md`, `.markdown` | UTF-8 Markdown, up to 2 MB |
 | `.txt` | UTF-8 text, up to 2 MB; article, report, or notes |
 | Public HTTP(S) article URL | Main readable HTML content; up to 3 MB downloaded HTML, five redirects, 30-second download timeout |
 | Local `.pdf` | Text-based, unencrypted PDF, up to 20 MB and 200 pages; 30-second extraction timeout |
@@ -147,11 +148,25 @@ Article and PDF extraction happens locally. Fetching a URL contacts the website 
 
 Scanned PDFs need OCR, which is not included. A PDF with a page containing no extractable text is rejected rather than silently dropping that page. Complex columns, tables, or unusual fonts can produce imperfect reading order. Extracted text is limited to 2 MB, and the local model's 65,000-character structured input limit still applies. Split long documents; content is never silently truncated to fit.
 
-Non-Markdown briefings discuss the source's topic, main argument or findings, evidence, limitations, and uncertainty. A next action is included only when the source explicitly recommends one. Markdown keeps the existing plan-specific prompts.
+All formats use content-based framing: an article saved as Markdown is still discussed as an article, and a plan saved as text can still explain proposals and explicit pending steps. File extensions select extraction, not the conversation style.
 
 Local files produce audio beside the source. URL briefings default to `article-<URL hash>.plancast.m4a` in the current directory; use `--output ./briefing.m4a` to choose a name. The JSON sidecar retains the extracted text, source location, normalized text hash, and PDF page-to-line references and original file hash. Treat sidecars as source content; they may contain sensitive information. Grounding references correspond to extracted text, not raw HTML or PDF bytes.
 
 `--dry-run` remains offline: it can extract local text/PDFs but rejects URL input without fetching it. To inspect a web article offline, save its text first.
+
+## Conversation framing
+
+By default, `--framing auto` asks the model to follow what the source actually contains: an article, report, research, notes, narrative, or plan. One host asks short questions tailored to the extracted evidence; the other explains it. The conversation preserves attribution, important facts, and uncertainty without imposing proposals or implementation steps on unrelated documents.
+
+```sh
+plancast article.md --play                         # Content-based framing
+plancast research.pdf --framing document --play    # Ideas, findings, and caveats
+plancast roadmap.txt --framing plan --play         # Proposal and implementation focus
+```
+
+`plan` and `document` are presentation preferences, not permission to invent content. Missing risks, open questions, and next actions are omitted. An action is discussed only when the source explicitly recommends it or identifies a concrete pending step. Auto framing is a model instruction, not a guaranteed document classifier; check the transcript against the source for important decisions.
+
+The pipeline first extracts cited evidence, then generates source-specific host questions and explanatory passages. Schema, source-reference, coverage, and word-budget checks run before speech synthesis. These checks cannot guarantee that every interpretation or question premise is accurate. The same framing applies to local, OpenAI, and Gemini generation. The selected framing appears in `--dry-run` output and the JSON sidecar. This setting does not change voices, input limits, privacy boundaries, or the two-minute target.
 
 ## Everyday commands
 

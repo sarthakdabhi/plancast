@@ -36,11 +36,17 @@ function referenceResponse(sourceLineId = "L1") {
 }
 function passageResponse() {
   const passage = (factId: string) => ({
-    text: Array(89).fill("word").join(" ") + ".",
+    text: Array(83).fill("word").join(" ") + ".",
     factId,
     interpretation: false,
   });
   return {
+    questions: {
+      opening: "What does this source tell us?",
+      details: null,
+      uncertainty: null,
+      recap: "What should listeners take away?",
+    },
     problem: passage("problem_1"),
     proposal: passage("proposal_1"),
     rationale: null,

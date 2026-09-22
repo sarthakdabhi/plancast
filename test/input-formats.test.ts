@@ -174,6 +174,12 @@ describe("document input", () => {
         });
       }
       return schema.parse({
+        questions: {
+          opening: "What do the summary findings suggest?",
+          details: null,
+          uncertainty: null,
+          recap: "What should listeners take away?",
+        },
         problem: {
           text: "Research into summaries.",
           factId: "problem_1",
@@ -203,10 +209,12 @@ describe("document input", () => {
       false,
     );
     expect(prompt).toContain("Only populate nextAction");
-    expect(dialogue.turns[0]!.text).toContain("what does the source say");
-    expect(dialogue.turns.at(-2)!.text).toBe("What's the takeaway?");
-    expect(dialogueComposer(dialogue, 100, false, true).instructions).toContain(
-      "never invent an action",
+    expect(dialogue.turns[0]!.text).toContain("summary findings");
+    expect(dialogue.turns.at(-2)!.text).toBe(
+      "What should listeners take away?",
     );
+    expect(
+      dialogueComposer(dialogue, 100, false, "document").instructions,
+    ).toContain("never invent an action");
   });
 });
