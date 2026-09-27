@@ -1,10 +1,12 @@
 import { it, expect, vi } from "vitest";
+import { randomUUID } from "node:crypto";
 import { config } from "../src/config.js";
 import { llamaScript } from "../src/providers/llama.js";
+const testToken = randomUUID();
 const engine = () => ({
   start: vi.fn(async () => ({
     url: "http://127.0.0.1:43210",
-    token: "private-token",
+    token: testToken,
   })),
   dispose: vi.fn(async () => {}),
 });
@@ -40,7 +42,7 @@ it("validates local sentence pairs and keeps citations through composition", asy
   const fetcher = vi.fn<typeof fetch>(async (url, init) => {
     expect(String(url)).toBe("http://127.0.0.1:43210/v1/chat/completions");
     expect(init?.headers).toMatchObject({
-      Authorization: "Bearer private-token",
+      Authorization: `Bearer ${testToken}`,
     });
     expect(init?.redirect).toBe("error");
     const body = JSON.parse(String(init?.body));
