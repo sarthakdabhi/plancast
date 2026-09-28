@@ -47,6 +47,9 @@ export function dialogueComposer(
       ),
     ),
   );
+  const multipleSources =
+    new Set(evidence.facts.map((fact) => fact.sourceId).filter(Boolean)).size >
+    1;
   const passage = (ids: string[]) =>
     z
       .object({
@@ -64,6 +67,9 @@ export function dialogueComposer(
         ),
         factId: z.enum(ids),
         interpretation: z.boolean(),
+        ...(multipleSources || targetWords > 400
+          ? { supportingFactIds: z.array(z.enum(ids)).max(4) }
+          : {}),
       })
       .strict();
   const slot = (category: Category) => {
@@ -119,7 +125,7 @@ export function dialogueComposer(
   const bodyWords = targetWords - questionWords;
   return {
     schema,
-    instructions: `Write complete grammatical sentences for each required topic, using only its evidence. Null topics are absent and must stay null. Each passage's factId must support its text; select the strongest matching fact. Never put IDs or citations in text. Keep interpretations explicitly qualified, and use interpretation=false for direct source paraphrases. Write a tailored question for each active group in questions: opening covers topic and main ideas; details covers supported sequence and limitations; uncertainty covers unresolved issues; recap invites the takeaway and any explicit next action. Each question must be 4–12 words and answerable from that group’s evidence. Never smuggle unsupported claims, false premises, or implied recommendations into a question. Use null for inactive groups. These questions and passages will be assembled locally into an alternating two-host dialogue. ALL passage texts combined must total approximately ${bodyWords} words, within 10%; this is one briefing, not that many words per topic. Each non-null passage MUST contain ${minWords}–${passageWords} words; these per-field limits include recap and nextAction. ${framing === "plan" ? "Recap restates the source-supported proposal and rationale." : "Recap restates the central ideas, findings, events, or proposal and supporting evidence."} Only discuss next actions explicitly stated in the source; never invent an action. Summarize at a high level when needed; never begin a list item or sentence you cannot finish within the limit. In stages, summarize the sequence rather than enumerating every phase. Avoid repeated explanations across passages, stage directions and filler. Preserve material risks, exclusions, quantities and uncertainty.`,
+    instructions: `Write complete grammatical sentences for each required topic, using only its evidence. Null topics are absent and must stay null. Each passage's factId must support its text; select the strongest matching fact. ${multipleSources || targetWords > 400 ? "Use supportingFactIds for additional evidence needed by the passage. In a longer briefing, explain distinct supporting facts, mechanisms, constraints or tradeoffs from the evidence rather than restating the same claim. For a disagreement cite evidence from both sources and explicitly attribute each position. Retain material conflicts; do not choose a winner or imply consensus." : ""} Never put IDs or citations in text. Keep interpretations explicitly qualified, and use interpretation=false for direct source paraphrases. Write a tailored question for each active group in questions: opening covers topic and main ideas; details covers supported sequence and limitations; uncertainty covers unresolved issues; recap invites the takeaway and any explicit next action. Each question must be 4–12 words and answerable from that group’s evidence. Never smuggle unsupported claims, false premises, or implied recommendations into a question. Use null for inactive groups. These questions and passages will be assembled locally into an alternating two-host dialogue. ALL passage texts combined must total approximately ${bodyWords} words, within 10%; this is one briefing, not that many words per topic. Each non-null passage MUST contain ${minWords}–${passageWords} words; these per-field limits include recap and nextAction. ${framing === "plan" ? "Recap restates the source-supported proposal and rationale." : "Recap restates the central ideas, findings, events, or proposal and supporting evidence."} Only discuss next actions explicitly stated in the source; never invent an action. Summarize at a high level when needed; never begin a list item or sentence you cannot finish within the limit. In stages, summarize the sequence rather than enumerating every phase. Avoid repeated explanations across passages, stage directions and filler. Preserve material risks, exclusions, quantities and uncertainty.`,
     compose(raw: unknown): Dialogue {
       const parsed = schema.safeParse(raw);
       if (!parsed.success)
@@ -140,7 +146,14 @@ export function dialogueComposer(
             "A required dialogue topic has empty spoken text. No speech was requested.",
             4,
           );
-        const factIds = [...new Set(passages.map((p) => p.factId))];
+        const factIds = [
+          ...new Set(
+            passages.flatMap((p) => [
+              p.factId,
+              ...z.array(z.string()).parse(p.supportingFactIds ?? []),
+            ]),
+          ),
+        ];
         turns.push({
           speaker: "HOST_A",
           text: draft.questions[group.id]!,

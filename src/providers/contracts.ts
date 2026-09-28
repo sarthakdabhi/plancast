@@ -1,6 +1,9 @@
 import type { Source } from "../input/markdown.js";
 export type Framing = "auto" | "plan" | "document";
+export type Audience = "general" | "technical" | "plain-English" | "executive";
 export interface DialogueRequest {
+  audience?: Audience;
+  focus?: string;
   framing?: Framing;
   source: Source;
   targetWords: number;

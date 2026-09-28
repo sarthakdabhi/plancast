@@ -37,100 +37,114 @@ it("defaults to local providers and keeps cloud voice settings separate", () => 
   });
   expect(() => config({}, "unknown")).toThrow();
 });
-it("validates local sentence pairs and keeps citations through composition", async () => {
-  let stage = 0;
-  const fetcher = vi.fn<typeof fetch>(async (url, init) => {
-    expect(String(url)).toBe("http://127.0.0.1:43210/v1/chat/completions");
-    expect(init?.headers).toMatchObject({
-      Authorization: `Bearer ${testToken}`,
-    });
-    expect(init?.redirect).toBe("error");
-    const body = JSON.parse(String(init?.body));
-    stage++;
-    if (stage === 1) {
-      const evidence = Object.fromEntries(
-        [
-          "problem",
-          "proposal",
-          "rationale",
-          "stages",
-          "risks",
-          "uncertainty",
-          "openQuestions",
-          "nextAction",
-        ].map((c) => [
-          c,
-          c === "proposal" || c === "problem"
-            ? {
-                summary: "Keep data local",
-                facts: [{ claim: "Keep data local", sourceLineId: "L1" }],
-              }
-            : null,
-        ]),
+it.each([280, 700])(
+  "validates local sentence fields at %i words and keeps citations",
+  async (targetWords) => {
+    let stage = 0;
+    const fetcher = vi.fn<typeof fetch>(async (url, init) => {
+      expect(String(url)).toBe("http://127.0.0.1:43210/v1/chat/completions");
+      expect(init?.headers).toMatchObject({
+        Authorization: `Bearer ${testToken}`,
+      });
+      expect(init?.redirect).toBe("error");
+      const body = JSON.parse(String(init?.body));
+      stage++;
+      if (stage === 1) {
+        const evidence = Object.fromEntries(
+          [
+            "problem",
+            "proposal",
+            "rationale",
+            "stages",
+            "risks",
+            "uncertainty",
+            "openQuestions",
+            "nextAction",
+          ].map((c) => [
+            c,
+            c === "proposal" || c === "problem"
+              ? {
+                  summary: "Keep data local",
+                  facts: [{ claim: "Keep data local", sourceLineId: "L1" }],
+                }
+              : null,
+          ]),
+        );
+        return Response.json({
+          choices: [
+            {
+              finish_reason: "stop",
+              message: { content: JSON.stringify(evidence) },
+            },
+          ],
+        });
+      }
+      expect(
+        body.response_format.json_schema.schema.properties.problem.properties
+          .text.required,
+      ).toEqual(
+        targetWords > 400
+          ? ["point", "explanation", "detail", "qualification"]
+          : ["point", "explanation"],
+      );
+      expect(
+        body.response_format.json_schema.schema.properties.problem.properties
+          .text.properties.point.pattern,
+      ).toBeUndefined();
+      const content = Object.fromEntries(
+        Object.keys(body.response_format.json_schema.schema.properties).map(
+          (c) => [
+            c,
+            c === "questions"
+              ? {
+                  opening: "What does this source tell us?",
+                  details: null,
+                  uncertainty: null,
+                  recap: "What should listeners take away?",
+                }
+              : ["problem", "proposal", "recap"].includes(c)
+                ? {
+                    text: {
+                      point: "Keep data\nlocal.",
+                      explanation: "Process the plan on this Mac.",
+                      ...(targetWords > 400
+                        ? {
+                            detail: "The data stays local.",
+                            qualification: "No cloud processing is required.",
+                          }
+                        : {}),
+                    },
+                    factId: c === "problem" ? "problem_1" : "proposal_1",
+                    interpretation: false,
+                    ...(targetWords > 400 ? { supportingFactIds: [] } : {}),
+                  }
+                : null,
+          ],
+        ),
       );
       return Response.json({
         choices: [
           {
             finish_reason: "stop",
-            message: { content: JSON.stringify(evidence) },
+            message: { content: JSON.stringify(content) },
           },
         ],
       });
-    }
-    expect(
-      body.response_format.json_schema.schema.properties.problem.properties.text
-        .required,
-    ).toEqual(["point", "explanation"]);
-    expect(
-      body.response_format.json_schema.schema.properties.problem.properties.text
-        .properties.point.pattern,
-    ).toBeUndefined();
-    const content = Object.fromEntries(
-      Object.keys(body.response_format.json_schema.schema.properties).map(
-        (c) => [
-          c,
-          c === "questions"
-            ? {
-                opening: "What does this source tell us?",
-                details: null,
-                uncertainty: null,
-                recap: "What should listeners take away?",
-              }
-            : ["problem", "proposal", "recap"].includes(c)
-              ? {
-                  text: {
-                    point: "Keep data local.",
-                    explanation: "Process the plan on this Mac.",
-                  },
-                  factId: c === "problem" ? "problem_1" : "proposal_1",
-                  interpretation: false,
-                }
-              : null,
-        ],
-      ),
-    );
-    return Response.json({
-      choices: [
-        {
-          finish_reason: "stop",
-          message: { content: JSON.stringify(content) },
-        },
-      ],
     });
-  });
-  const result = (await llamaScript(
-    "qwen3:14b",
-    fetcher,
-    undefined,
-    engine(),
-  ).generateDialogue(request())) as {
-    turns: { text: string; factIds: string[] }[];
-  };
-  expect(result.turns[1]?.text).toContain(
-    "Keep data local. Process the plan on this Mac.",
-  );
-  expect(result.turns[1]?.factIds).toContain("problem_1");
-});
+    const result = (await llamaScript(
+      "qwen3:14b",
+      fetcher,
+      undefined,
+      engine(),
+    ).generateDialogue({ ...request(), targetWords })) as {
+      turns: { text: string; factIds: string[] }[];
+    };
+    expect(result.turns[1]?.text).toContain(
+      "Keep data local. Process the plan on this Mac.",
+    );
+    expect(result.turns[1]?.factIds).toContain("problem_1");
+  },
+);
 it("local PCM pacing rejects excessive rate changes", async () => {
   if (process.platform !== "darwin") return;
   const { localAudio } = await import("../src/audio/local.js");
@@ -203,13 +217,22 @@ it("limits transient llama.cpp retries to two", async () => {
   ).rejects.toMatchObject({ code: "LOCAL_PROVIDER" });
   expect(fetcher).toHaveBeenCalledTimes(3);
 });
-it("rejects oversized source before starting native inference", async () => {
+it("bounds long source requests before native inference", async () => {
   const runtime = engine();
+  const fetcher = vi.fn<typeof fetch>(async (_url, init) => {
+    const body = JSON.parse(String(init?.body));
+    expect(body.messages[1].content.length).toBeLessThan(24000);
+    return new Response(
+      JSON.stringify({
+        choices: [{ finish_reason: "length", message: { content: "{}" } }],
+      }),
+    );
+  });
   await expect(
-    llamaScript("qwen3:14b", fetch, undefined, runtime).generateDialogue({
+    llamaScript("qwen3:14b", fetcher, undefined, runtime).generateDialogue({
       ...request(),
       source: { ...source, lines: ["x".repeat(66000)] },
     }),
-  ).rejects.toMatchObject({ code: "LOCAL_CONTEXT" });
-  expect(runtime.start).not.toHaveBeenCalled();
+  ).rejects.toMatchObject({ code: "DIALOGUE_SCHEMA" });
+  expect(runtime.start).toHaveBeenCalledTimes(1);
 });
