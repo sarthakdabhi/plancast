@@ -18,7 +18,7 @@ function resolvedOptions(command: Command) {
 const program = new Command()
   .name("plancast")
   .enablePositionalOptions()
-  .version("0.6.0")
+  .version("0.6.1")
   .description(
     "Turn documents and public articles into grounded two-host audio briefings",
   )

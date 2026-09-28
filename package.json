@@ -1,6 +1,6 @@
 {
   "name": "plancast",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Local two-host audio briefings from documents and public articles",
   "type": "module",
   "bin": {

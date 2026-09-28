@@ -17,7 +17,7 @@ Replace the example filenames or URL with your own source. Fetching an article c
 
 **macOS 14+ · Apple Silicon · Local by default · Two- or five-minute briefings**
 
-Version 0.6.0 adds five-minute briefings, multiple sources, reusable drafts, caching, audience controls, and independent writing and speech providers.
+Version 0.6.1 updates dependencies and build tooling. The 0.6 workflow includes five-minute briefings, multiple sources, reusable drafts, caching, audience controls, and independent writing and speech providers.
 
 ## What you can listen to
 
@@ -67,17 +67,17 @@ Or install directly without Homebrew:
 
 The standalone Apple Silicon archive includes its own **Node.js 24.21.0** runtime. You do not need Homebrew, npm, Node, uv, Python, FFmpeg, Ollama, or LM Studio installed separately.
 
-Download the archive and checksum from [GitHub Releases](https://github.com/sarthakdabhi/plancast/releases/tag/v0.6.0), then run:
+Download the archive and checksum from [GitHub Releases](https://github.com/sarthakdabhi/plancast/releases/tag/v0.6.1), then run:
 
 ```sh
-shasum -a 256 -c plancast-0.6.0-macos-arm64.tar.gz.sha256
-tar -xzf plancast-0.6.0-macos-arm64.tar.gz
-sh plancast-0.6.0-macos-arm64/install.command
+shasum -a 256 -c plancast-0.6.1-macos-arm64.tar.gz.sha256
+tar -xzf plancast-0.6.1-macos-arm64.tar.gz
+sh plancast-0.6.1-macos-arm64/install.command
 ```
 
 The installer verifies file checksums, installs into `~/.local/share/plancast/cli/`, and creates `~/.local/bin/plancast`. It requires no administrator access and does not modify your shell configuration or replace unrelated commands.
 
-Version 0.6.0 is an early prerelease. The archive is not a notarized installer. See [Development](#development) to build an archive or install from source. Apple Silicon is the validated target; Intel packaging and speech support remain unverified.
+Version 0.6.1 is an early prerelease. The archive is not a notarized installer. See [Development](#development) to build an archive or install from source. Apple Silicon is the validated target; Intel packaging and speech support remain unverified.
 
 ### 2. Make the command available
 
@@ -225,7 +225,7 @@ PLANCAST_LOCAL_VOICE_A=alba plancast render report-draft.json --output report-al
 
 Transcript-only generation saves a text transcript and a JSON draft containing the structured dialogue, evidence, source snapshots, hashes, and generation settings. It performs no speech or audio-tool work. `render` uses that exact dialogue without a writing-model request and retains its original length/audience settings. By default, rendering writes `<draft-stem>.rendered.m4a` and sidecars. It never silently rewrites a reviewed draft to fix duration; bounded local pacing may be used, otherwise rendering fails.
 
-The JSON contains the validated structured script; the `.txt` is its exact readable export. Edited JSON, or an edited sibling transcript when present, invalidates draft reuse. Regenerate from the source to change the explanation. Old 0.6.0 sidecars lack this draft bundle and must be regenerated once. These integrity checks detect changes; they are not a semantic correctness guarantee or a digital signature.
+The JSON contains the validated structured script; the `.txt` is its exact readable export. Edited JSON, or an edited sibling transcript when present, invalidates draft reuse. Regenerate from the source to change the explanation. Sidecars from 0.5.0 and earlier lack this draft bundle and must be regenerated once. These integrity checks detect changes; they are not a semantic correctness guarantee or a digital signature.
 
 ### Reuse generation work
 
