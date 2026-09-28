@@ -5,14 +5,25 @@ const abort = new AbortController();
 const stop = () => abort.abort();
 process.once("SIGINT", stop);
 process.once("SIGTERM", stop);
+function resolvedOptions(command: Command) {
+  return {
+    ...command.optsWithGlobals(),
+    ...Object.fromEntries(
+      Object.entries(command.opts()).filter(
+        ([key]) => command.getOptionValueSource(key) === "cli",
+      ),
+    ),
+  };
+}
 const program = new Command()
   .name("plancast")
-  .version("0.5.0")
+  .enablePositionalOptions()
+  .version("0.6.0")
   .description(
     "Turn documents and public articles into grounded two-host audio briefings",
   )
   .argument(
-    "<source>",
+    "<sources...>",
     "Markdown/text file (2 MB), text-based PDF (20 MB), or public article URL",
   )
   .option(
@@ -24,7 +35,24 @@ const program = new Command()
     "Conversation framing: auto (content-based), plan, or document",
     "auto",
   )
-  .option("--length <length>", "Briefing length (2m supported)", "2m")
+  .option(
+    "--script-provider <provider>",
+    "Writing provider: local, openai, or gemini",
+  )
+  .option(
+    "--speech-provider <provider>",
+    "Speech provider: local, openai, or gemini",
+  )
+  .option(
+    "--audience <audience>",
+    "general, technical, plain-English, or executive",
+    "general",
+  )
+  .option(
+    "--focus <topic>",
+    "Emphasize a topic while retaining material caveats",
+  )
+  .option("--length <length>", "Briefing length (2m or 5m)", "2m")
   .option("--output <path>", "Destination M4A file")
   .option("--play", "Open the completed briefing in your default browser")
   .option("--force", "Replace existing output and sidecars")
@@ -34,6 +62,11 @@ const program = new Command()
   )
   .option("--dry-run", "Validate locally without network requests or writes")
   .option("--json", "Machine-readable stdout; progress goes to stderr")
+  .option(
+    "--transcript-only",
+    "Save validated dialogue and source evidence without speech",
+  )
+  .option("--no-cache", "Bypass generation cache reads and writes")
   .option("--debug", "Retain temporary artifacts on generation failure")
   .exitOverride()
   .action(async (source, options) => {
@@ -44,7 +77,63 @@ const program = new Command()
         ? JSON.stringify(result) + "\n"
         : result.status === "dry_run"
           ? JSON.stringify(result, null, 2) + "\n"
-          : `Created ${result.audioPath} (${result.actualDurationSeconds?.toFixed(1)} seconds)\nScript: ${result.scriptPath}\nManifest: ${result.manifestPath}\n`,
+          : result.status === "transcript"
+            ? `Transcript: ${result.scriptPath}\nDraft: ${result.manifestPath}\n`
+            : `Created ${result.audioPath} (${result.actualDurationSeconds?.toFixed(1)} seconds)\nScript: ${result.scriptPath}\nManifest: ${result.manifestPath}\n`,
+    );
+  });
+program
+  .command("render")
+  .description(
+    "Render a saved validated JSON draft without rewriting its dialogue",
+  )
+  .argument("<draft>", "Plancast JSON sidecar containing the validated draft")
+  .option("--provider <provider>", "Speech provider: local, openai, or gemini")
+  .option(
+    "--speech-provider <provider>",
+    "Speech provider: local, openai, or gemini",
+  )
+  .option("--output <path>", "Destination M4A file")
+  .option("--play", "Open completed audio")
+  .option("--force", "Replace output and sidecars")
+  .option("--yes", "Acknowledge cloud speech and API charges")
+  .option("--no-cache", "Bypass cache reads and writes")
+  .option("--dry-run", "Inspect without provider calls or writes")
+  .option("--json", "Machine-readable output")
+  .action(async (draft: string, _options, command: Command) => {
+    const options = resolvedOptions(command);
+    const { generate } = await import("./generate.js");
+    const result = await generate(
+      draft,
+      { ...options, length: "2m", fromDraft: true },
+      abort.signal,
+    );
+    process.stdout.write(
+      options.json || options.dryRun
+        ? JSON.stringify(result) + "\n"
+        : `Audio: ${result.audioPath}\nTranscript: ${result.scriptPath}\nManifest: ${result.manifestPath}\n`,
+    );
+  });
+program
+  .command("cache")
+  .description("Manage private generation cache")
+  .command("clear")
+  .description("Remove Plancast's generation cache")
+  .option("--yes", "Confirm cache removal")
+  .action(async (_options, command: Command) => {
+    const options = resolvedOptions(command);
+    const { cacheDirectory, clearCache } = await import("./artifacts/cache.js");
+    const { acknowledgeCloud } = await import("./generate.js");
+    process.stderr.write(`Remove generation cache at ${cacheDirectory()}\n`);
+    if (!options.yes && !(await acknowledgeCloud(abort.signal)))
+      throw new PlancastError(
+        "ACKNOWLEDGEMENT",
+        "Cache removal not confirmed. Use --yes in automation.",
+        3,
+      );
+    await clearCache();
+    process.stdout.write(
+      "Generation cache cleared. Saved briefings and models are unchanged.\n",
     );
   });
 program
@@ -65,7 +154,8 @@ program
     "Download and save a writing model: qwen3:4b, qwen3:8b, or qwen3:14b",
   )
   .option("--yes", "Skip model selection and use the selected/default model")
-  .action(async (options: { model?: string; yes?: boolean }) => {
+  .action(async (_options, command: Command) => {
+    const options = resolvedOptions(command);
     const { setupLocal } = await import("./commands/setup-local.js");
     await setupLocal(options, abort.signal);
   });
@@ -100,7 +190,8 @@ program
     "Generate a short local two-voice sample without a plan or writing model",
   )
   .option("--play", "Open the sample in the browser player")
-  .action(async (options: { play?: boolean }) => {
+  .action(async (_options, command: Command) => {
+    const options = resolvedOptions(command);
     const { previewVoices } = await import("./audio/voice-preview.js");
     const result = await previewVoices(abort.signal, options.play);
     process.stdout.write(
@@ -124,7 +215,7 @@ try {
       : known
         ? error.message
         : "Unexpected local failure. Check output permissions and available disk space.";
-    if (program.opts().json)
+    if (process.argv.includes("--json"))
       process.stdout.write(
         JSON.stringify({ status: "error", code, message }) + "\n",
       );

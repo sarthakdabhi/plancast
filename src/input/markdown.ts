@@ -9,10 +9,24 @@ import { PlancastError } from "../domain/errors.js";
 export const hash = (data: string | Buffer) =>
   createHash("sha256").update(data).digest("hex");
 export interface Source {
-  kind?: "markdown" | "text" | "article" | "pdf";
-  title?: string;
-  pages?: { page: number; startLine: number; endLine: number }[];
-  originalSha256?: string;
+  kind?: "markdown" | "text" | "article" | "pdf" | "bundle" | undefined;
+  sources?:
+    | {
+        id: string;
+        path: string;
+        kind: string;
+        sha256: string;
+        text: string;
+        startLine: number;
+        endLine: number;
+        pages?:
+          { page: number; startLine: number; endLine: number }[] | undefined;
+        originalSha256?: string | undefined;
+      }[]
+    | undefined;
+  title?: string | undefined;
+  pages?: { page: number; startLine: number; endLine: number }[] | undefined;
+  originalSha256?: string | undefined;
   path: string;
   text: string;
   lines: string[];

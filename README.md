@@ -4,7 +4,7 @@
 
 **Turn documents and public articles into two-person audio briefings—then listen at your own pace.**
 
-Plancast accepts **Markdown, plain-text files, public article URLs, and text-based PDFs**. It extracts the content, writes a grounded conversation, and creates an audio briefing with two distinct AI voices: Jane and George. Dialogue and speech generation run locally on your Mac by default. OpenAI is available as an explicit alternative; Google Gemini is also available for dialogue and speech.
+Plancast accepts **Markdown, plain-text files, public article URLs, and text-based PDFs**, individually or as a source bundle. It extracts the content, writes a grounded conversation, and creates an audio briefing with two distinct AI voices: Jane and George. Dialogue and speech generation run locally on your Mac by default. OpenAI is available as an explicit alternative; Google Gemini is also available for dialogue and speech.
 
 ```sh
 plancast PLAN.md --play                         # Markdown plan
@@ -15,7 +15,9 @@ plancast "https://example.com/article" --play    # Public article URL
 
 Replace the example filenames or URL with your own source. Fetching an article contacts that website; the extracted content is processed locally unless you explicitly choose a cloud provider.
 
-**macOS 14+ · Apple Silicon · Local by default · Two-minute briefings**
+**macOS 14+ · Apple Silicon · Local by default · Two- or five-minute briefings**
+
+Version 0.6.0 adds five-minute briefings, multiple sources, reusable drafts, caching, audience controls, and independent writing and speech providers.
 
 ## What you can listen to
 
@@ -26,7 +28,7 @@ Replace the example filenames or URL with your own source. Fetching an article c
 | **Public article links** (`http://` or `https://`) | Blog posts, essays, readable web articles | Extracts the main article without executing scripts or loading embedded resources |
 | **Text-based PDFs** (`.pdf`) | Reports, papers, exported documents | Extracts text locally and retains page-to-line references |
 
-You get an **M4A audio file**, a **two-host transcript**, and a **JSON sidecar** with generation metadata. Non-Markdown sidecars also retain the extracted source text. The local browser player supports pause, seeking, and playback speed controls.
+You get an **M4A audio file**, a **two-host transcript**, and a **JSON sidecar** with generation metadata. JSON sidecars retain source snapshots and the validated structured dialogue for later re-rendering. The local browser player supports pause, seeking, and playback speed controls.
 
 Word documents (`.docx`), saved HTML files, scanned PDFs/OCR, password-protected PDFs, and direct PDF URLs are **not supported yet**. Download a text-based PDF before using it; export other documents to UTF-8 `.txt` or `.md`. Login-protected, paywalled, and JavaScript-only webpages may not extract. See [Supported inputs and limits](#supported-inputs-and-limits) for details.
 
@@ -37,6 +39,7 @@ Word documents (`.docx`), saved HTML files, scanned PDFs/OCR, password-protected
 - [Supported inputs and limits](#supported-inputs-and-limits)
 - [Conversation framing](#conversation-framing)
 - [Everyday commands](#everyday-commands)
+- [Extended briefing workflow](#extended-briefing-workflow)
 - [Choose and download a model](#choose-and-download-a-model)
 - [Choose voices](#choose-voices)
 - [Use OpenAI instead](#use-openai-instead)
@@ -64,17 +67,17 @@ Or install directly without Homebrew:
 
 The standalone Apple Silicon archive includes its own **Node.js 24.21.0** runtime. You do not need Homebrew, npm, Node, uv, Python, FFmpeg, Ollama, or LM Studio installed separately.
 
-Download the archive and checksum from [GitHub Releases](https://github.com/sarthakdabhi/plancast/releases/tag/v0.5.0), then run:
+Download the archive and checksum from [GitHub Releases](https://github.com/sarthakdabhi/plancast/releases/tag/v0.6.0), then run:
 
 ```sh
-shasum -a 256 -c plancast-0.5.0-macos-arm64.tar.gz.sha256
-tar -xzf plancast-0.5.0-macos-arm64.tar.gz
-sh plancast-0.5.0-macos-arm64/install.command
+shasum -a 256 -c plancast-0.6.0-macos-arm64.tar.gz.sha256
+tar -xzf plancast-0.6.0-macos-arm64.tar.gz
+sh plancast-0.6.0-macos-arm64/install.command
 ```
 
 The installer verifies file checksums, installs into `~/.local/share/plancast/cli/`, and creates `~/.local/bin/plancast`. It requires no administrator access and does not modify your shell configuration or replace unrelated commands.
 
-Version 0.5.0 is an early prerelease. The archive is not a notarized installer. See [Development](#development) to build an archive or install from source. Apple Silicon is the validated target; Intel packaging and speech support remain unverified.
+Version 0.6.0 is an early prerelease. The archive is not a notarized installer. See [Development](#development) to build an archive or install from source. Apple Silicon is the validated target; Intel packaging and speech support remain unverified.
 
 ### 2. Make the command available
 
@@ -112,7 +115,7 @@ plancast report.pdf --play
 plancast "https://example.com/article" --output ./article-briefing.m4a --play
 ```
 
-The CLI creates the audio, opens a local browser player, and returns to the terminal. Press **Play** if your browser blocks autoplay. Local generation can take several minutes, especially for long documents. Only `--length 2m` is currently supported; `1m`, `3m`, and `4m` are not implemented.
+The CLI creates the audio, opens a local browser player, and returns to the terminal. Press **Play** if your browser blocks autoplay. Local generation can take several minutes, especially for long documents. `--length 2m` targets 110–140 seconds; `--length 5m` targets 270–330 seconds. Other lengths are rejected.
 
 > **Already installed?** Start with `plancast PLAN.md --play`. To listen to a briefing you already generated, use `plancast listen PLAN.plancast.m4a`.
 
@@ -146,7 +149,7 @@ plancast report.pdf --play
 
 Article and PDF extraction happens locally. Fetching a URL contacts the website from your Mac; it does not send the article to a cloud AI service unless you explicitly choose OpenAI or Gemini. URL requests do not use browser cookies, execute page scripts, or load embedded resources. Local/private addresses, credentials in URLs, and custom ports are rejected. Login-protected, paywalled, or JavaScript-only content may not extract; save readable text as `.txt` instead. Remote PDF URLs are not supported: download the PDF and pass its local path.
 
-Scanned PDFs need OCR, which is not included. A PDF with a page containing no extractable text is rejected rather than silently dropping that page. Complex columns, tables, or unusual fonts can produce imperfect reading order. Extracted text is limited to 2 MB, and the local model's 65,000-character structured input limit still applies. Split long documents; content is never silently truncated to fit.
+Scanned PDFs need OCR, which is not included. A PDF with a page containing no extractable text is rejected rather than silently dropping that page. Complex columns, tables, or unusual fonts can produce imperfect reading order. Extracted text is limited to 2 MB. Longer sources are split into bounded evidence requests, then consolidated before dialogue generation. Original source lines are retained, including exact fragments of unusually long lines. No source text is silently truncated to fit. Larger documents need more model calls and can take considerably longer.
 
 All formats use content-based framing: an article saved as Markdown is still discussed as an article, and a plan saved as text can still explain proposals and explicit pending steps. File extensions select extraction, not the conversation style.
 
@@ -166,7 +169,7 @@ plancast roadmap.txt --framing plan --play         # Proposal and implementation
 
 `plan` and `document` are presentation preferences, not permission to invent content. Missing risks, open questions, and next actions are omitted. An action is discussed only when the source explicitly recommends it or identifies a concrete pending step. Auto framing is a model instruction, not a guaranteed document classifier; check the transcript against the source for important decisions.
 
-The pipeline first extracts cited evidence, then generates source-specific host questions and explanatory passages. Schema, source-reference, coverage, and word-budget checks run before speech synthesis. These checks cannot guarantee that every interpretation or question premise is accurate. The same framing applies to local, OpenAI, and Gemini generation. The selected framing appears in `--dry-run` output and the JSON sidecar. This setting does not change voices, input limits, privacy boundaries, or the two-minute target.
+The pipeline first extracts cited evidence, then generates source-specific host questions and explanatory passages. Schema, source-reference, coverage, and word-budget checks run before speech synthesis. These checks cannot guarantee that every interpretation or question premise is accurate. The same framing applies to local, OpenAI, and Gemini generation. The selected framing appears in `--dry-run` output and the JSON sidecar. This setting does not change voices, input limits, privacy boundaries, or the selected duration target.
 
 ## Everyday commands
 
@@ -194,9 +197,60 @@ Quote paths that contain spaces:
 plancast "My Project/Implementation Plan.md" --play
 ```
 
-**Generation and playback are separate.** Running `plancast PLAN.md` generates again; it does not replay or reuse existing audio. Use `listen` to replay without computation or API charges. Use `--force` only when you want to replace the existing audio and its sidecars.
+**Generation and playback are separate.** Running `plancast PLAN.md` generates a briefing or reuses an exact cache hit. Use `listen` to replay without computation or API charges. Use `--force` only when you want to replace the existing audio and its sidecars.
 
 Ctrl-C interrupts generation. Once the browser player is open, pause or close that tab to stop playback.
+
+## Extended briefing workflow
+
+```sh
+plancast report.pdf --length 5m --play
+plancast PRD.md PLAN.md review.txt --length 5m --output decision.m4a
+plancast report.pdf --audience plain-English --focus "limitations and evidence"
+plancast PLAN.md --audience technical
+plancast PRD.md --audience executive
+```
+
+Sources retain separate `S1`, `S2`, … identities, original locations, line references, and PDF page mappings in the JSON artifact. Cross-source disagreements are explicitly requested during consolidation and can cite both positions in a spoken passage. This remains model-based synthesis: references and schemas do not guarantee detection of every contradiction or omission. Multiple-source output defaults to `briefing-<content hash>.plancast.m4a` in the current directory.
+
+Audience presets are `general` (default), `technical`, `plain-English`, and `executive`. `--focus` accepts up to 500 characters. These preferences change wording and emphasis; material caveats, exclusions, and uncertainty remain required. Framing and audience are independent.
+
+### Review a draft, then render it
+
+```sh
+plancast report.pdf --length 5m --transcript-only --output report-draft.txt
+plancast render report-draft.json --output report.m4a --play
+PLANCAST_LOCAL_VOICE_A=alba plancast render report-draft.json --output report-alba.m4a
+```
+
+Transcript-only generation saves a text transcript and a JSON draft containing the structured dialogue, evidence, source snapshots, hashes, and generation settings. It performs no speech or audio-tool work. `render` uses that exact dialogue without a writing-model request and retains its original length/audience settings. By default, rendering writes `<draft-stem>.rendered.m4a` and sidecars. It never silently rewrites a reviewed draft to fix duration; bounded local pacing may be used, otherwise rendering fails.
+
+The JSON contains the validated structured script; the `.txt` is its exact readable export. Edited JSON, or an edited sibling transcript when present, invalidates draft reuse. Regenerate from the source to change the explanation. Old 0.6.0 sidecars lack this draft bundle and must be regenerated once. These integrity checks detect changes; they are not a semantic correctness guarantee or a digital signature.
+
+### Reuse generation work
+
+Script and audio caches are separate. An unchanged run reuses validated artifacts with no model or speech calls. Changing voices reuses the script; changing source content, length, framing, audience, focus, writing model, or prompt version invalidates the script cache. Corrupt entries are regenerated when possible. Existing unrelated or modified outputs still require a new output path or `--force`.
+
+```sh
+plancast PLAN.md --play                 # Exact repeat can use cached audio
+plancast PLAN.md --no-cache --force     # Regenerate without reading/writing cache
+plancast cache clear                   # Shows the fixed cache path and asks once
+plancast cache clear --yes             # Non-interactive cache removal
+```
+
+Private cache files live in `~/Library/Caches/Plancast/generation-v1/`. They contain source snapshots, dialogue, and potentially audio. Clearing the cache leaves saved briefings and downloaded models intact. Cache has no automatic expiry. URL generation still fetches the source website to establish current content; use a saved local file or `render` for offline reuse. `--dry-run` never fetches a URL or writes cache files.
+
+### Choose writing and speech independently
+
+```sh
+plancast PLAN.md --script-provider local --speech-provider openai --yes
+plancast PLAN.md --script-provider gemini --speech-provider local --yes
+plancast render report-draft.json --speech-provider gemini --yes
+```
+
+`--provider` still selects both stages. A role-specific flag overrides that pair. Without an explicit pair, `PLANCAST_SCRIPT_PROVIDER` and `PLANCAST_SPEECH_PROVIDER` override `PLANCAST_PROVIDER`; the default remains local for both. Existing provider-specific model and voice settings apply to the corresponding stage.
+
+Cloud writing sends source excerpts and derived evidence to the selected writer. Cloud speech sends only the validated dialogue to the selected speech provider. Each active remote stage is disclosed before any model/speech request and requires acknowledgement. Only active remote stages need credentials; complete cache hits need none. Transcript-only generation never invokes the configured speech provider. There is no automatic provider fallback.
 
 ## Choose and download a model
 
@@ -454,7 +508,7 @@ Dry-run supports local Markdown, text, and PDF files; URL input is rejected with
 | Another setup may be running | Wait for it to finish. After a hard crash, remove only the `.setup-llama.lock` directory named in the error if no setup is running. |
 | Pocket TTS failed or is not installed | Run `plancast setup-local` to install dependencies and download the supported voices. |
 | Local pacing needs the managed FFmpeg runtime | Run `plancast setup-local`, then retry. |
-| Document exceeds the local input limit | Split the document into smaller sections, or explicitly choose OpenAI if sending it remotely is acceptable. |
+| Document exceeds the local input limit | Reduce the source set if extracted text exceeds the combined limit. Long supported documents are chunked automatically. |
 | URL does not contain a readable article | Use a public article page or save its readable content as `.txt`. Login, paywall, and JavaScript-only pages are not supported. |
 | PDF page has no extractable text | Use a text-based PDF or export its text. OCR and image-only pages are not supported. |
 | URL points to a PDF | Download the PDF first, then run `plancast report.pdf --play`. |
@@ -474,13 +528,13 @@ Exit codes: `0` success, `1` unexpected local failure, `2` input/arguments, `3` 
 
 ## Limits and privacy
 
-- **Two-minute mode only:** `2m` is the default and targets 110–140 seconds. Five-minute mode is not implemented.
-- **Input:** Markdown/text up to 2 MB; also supports public article URLs and text-based PDFs as described above. Local generation additionally limits the structured source payload to 65,000 characters and requests a 32K model context.
+- **Length:** `2m` is the default (110–140 seconds); `5m` targets 270–330 seconds. A short source may not support a faithful five-minute explanation; validation can fail instead of padding or publishing unchecked audio.
+- **Input:** Markdown/text up to 2 MB; also supports public article URLs and text-based PDFs as described above. Evidence extraction uses bounded chunks and hierarchical consolidation within the local model context. One run accepts up to ten sources, with a combined 2 MB extracted-text limit.
 - **Language and hardware:** English and an Apple M2 Max with 64 GB have been exercised. Smaller Macs, Intel Macs, and other languages have not been comprehensively validated.
 - **Local content stays local:** setup downloads software and model assets; subsequent local generation processes the extracted source on this Mac. The speech worker disables networking; llama.cpp uses offline mode and a local model file. No automatic cloud fallback or Plancast telemetry is added.
 - **Validation has limits:** source quotations, references, required topics, word budgets, and audio duration are checked. Those checks cannot prove every paraphrase is true or catch every omission. Review the transcript for important decisions.
 - **Bounded corrections:** one correction is allowed. Local audio narrowly outside the duration window may receive a pitch-preserving 0.85×–1.15× pacing adjustment instead of another script pass; the applied rate is recorded in metadata.
-- **Not yet implemented:** generation caching, persistent project/user config files, Keychain integration, additional speech backends, and a native Mac interface.
+- **Not yet implemented:** general project/user config files, Keychain integration, additional speech backends, and a native Mac interface.
 
 See [validation notes](docs/VALIDATION.md) for measured results and remaining quality gates.
 

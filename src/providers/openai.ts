@@ -71,19 +71,11 @@ export function openaiProviders(
     script: {
       id: "openai",
       model: scriptModel,
-      async generateDialogue({
-        source,
-        targetWords,
-        signal,
-        feedback,
-      }: DialogueRequest) {
+      async generateDialogue(request: DialogueRequest) {
         try {
-          return await groundedDialogue(
-            { source, targetWords, signal, ...(feedback ? { feedback } : {}) },
-            requestJson,
-          );
+          return await groundedDialogue(request, requestJson);
         } catch (error) {
-          normalize(error, signal);
+          normalize(error, request.signal);
         }
       },
     },
