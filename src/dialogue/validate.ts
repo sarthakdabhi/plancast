@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { factOrigin } from "../input/sources.js";
 import { sourceQuoteResolver } from "./source-quotes.js";
 import type { Source } from "../input/markdown.js";
 import { PlancastError } from "../domain/errors.js";
@@ -16,6 +17,11 @@ const fact = z
   .object({
     id: z.string(),
     category: z.enum(categories),
+    sourceId: z.string().optional(),
+    sourceLocation: z.string().optional(),
+    sourceStartLine: z.number().int().optional(),
+    sourceEndLine: z.number().int().optional(),
+    sourcePages: z.array(z.number().int()).optional(),
     claim: z.string(),
     quote: z.string(),
     startLine: z.number().int(),
@@ -82,6 +88,8 @@ export function validateDialogue(
     if (!f.id.trim() || ids.has(f.id) || !f.claim.trim() || !f.quote.trim())
       fail("Script has invalid source references.");
     Object.assign(f, resolveQuote(f.quote, f.startLine, f.endLine));
+    if (source.sources)
+      Object.assign(f, factOrigin(source, f.startLine, f.endLine));
     ids.add(f.id);
   }
   for (const t of d.turns) {
@@ -93,12 +101,18 @@ export function validateDialogue(
       )
       .replace(/ {2,}/g, " ")
       .trim();
-    if (
-      !t.text.trim() ||
-      t.text.length > 4000 ||
-      /[\u0000-\u001f]|HOST_[AB]:|\[[^\]]+\]|<[^>]+>/.test(t.text)
-    )
-      fail("Script contains empty text, control text, or stage directions.");
+    if (!t.text.trim())
+      fail("Script contains an empty spoken turn. No speech was requested.");
+    if (t.text.length > 4000)
+      fail(
+        "A spoken turn exceeds 4,000 characters. Shorten its explanation before speech.",
+      );
+    if (/[\u0000-\u001f]/.test(t.text))
+      fail("Script contains control characters. No speech was requested.");
+    if (/HOST_[AB]:|\[[^\]]+\]|<[^>]+>/.test(t.text))
+      fail(
+        "Script contains embedded host labels, citations, or markup. No speech was requested.",
+      );
     if (!t.factIds.length || t.factIds.some((id) => !ids.has(id)))
       fail("Every turn must reference verified source facts.");
     if (
@@ -106,6 +120,25 @@ export function validateDialogue(
       !/interpretation|may|might|could|suggests/i.test(t.text)
     )
       t.text = `Our interpretation is: ${t.text}`;
+  }
+  for (const turn of d.turns.filter((turn) => turn.speaker === "HOST_B")) {
+    const sentences = turn.text.match(/[^.!?]+[.!?](?:["']|$|\s)?/g) ?? [];
+    const seen = new Set<string>();
+    for (const sentence of sentences) {
+      const normalized = sentence
+        .toLowerCase()
+        .replace(/[^a-z0-9 ]/g, "")
+        .replace(/ +/g, " ")
+        .trim();
+      if (wordCount(normalized) < 8) continue;
+      if (seen.has(normalized))
+        throw new PlancastError(
+          "DIALOGUE_REPETITION",
+          "Script repeats an explanatory sentence. Use distinct source-supported details instead of padding the briefing.",
+          4,
+        );
+      seen.add(normalized);
+    }
   }
   for (const category of categories) {
     const facts = d.facts.filter((f) => f.category === category);

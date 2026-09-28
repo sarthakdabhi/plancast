@@ -5,7 +5,7 @@ import { PlancastError, interrupted } from "../domain/errors.js";
 import type { ScriptProvider } from "./contracts.js";
 import { LLAMA_VERSION, modelAsset } from "../runtime/assets.js";
 import { llamaEngine, type LocalEngine } from "../runtime/llama.js";
-export const LOCAL_PROMPT_VERSION = "dialogue-v9-llama-v1";
+export const LOCAL_PROMPT_VERSION = "dialogue-v11-llama-v1";
 export function llamaScript(
   model: string,
   transport: typeof fetch = fetch,
@@ -24,13 +24,15 @@ export function llamaScript(
     if (payload.length > 65000)
       throw new PlancastError(
         "LOCAL_CONTEXT",
-        "This document exceeds the local model input limit. Split it into smaller documents.",
+        "Consolidated evidence exceeds the local model context. Use a smaller source set.",
         2,
       );
     progress?.(
       name === "plancast_evidence"
         ? "Extracting source evidence with local Qwen…"
-        : "Writing the local two-host dialogue…",
+        : name === "plancast_consolidation"
+          ? "Consolidating source evidence with local Qwen…"
+          : "Writing the local two-host dialogue…",
     );
     const { url, token } = await engine.start(signal);
     const wireSchema = z.toJSONSchema(schema);
@@ -46,32 +48,44 @@ export function llamaScript(
             (topic.properties.text as { description?: string }).description ??
             "";
           const allocation = /Write (\d+) to (\d+)/.exec(description);
+          const sentenceCount =
+            Number((data as { targetWords?: number }).targetWords) > 400 &&
+            allocation &&
+            Number(allocation[2]) >= 50
+              ? 4
+              : 2;
           const minSentenceWords = allocation
-            ? Math.ceil(Number(allocation[1]) / 2)
+            ? Math.ceil(Number(allocation[1]) / sentenceCount)
             : 20;
           const maxSentenceWords = allocation
-            ? Math.max(minSentenceWords, Math.floor(Number(allocation[2]) / 2))
+            ? Math.max(
+                minSentenceWords,
+                Math.floor(Number(allocation[2]) / sentenceCount),
+              )
             : 30;
+          const fields =
+            sentenceCount === 4
+              ? ["point", "explanation", "detail", "qualification"]
+              : ["point", "explanation"];
           topic.properties.text = {
             type: "object",
-            properties: {
-              point: {
-                type: "string",
-                description: `A complete sentence of ${minSentenceWords}–${maxSentenceWords} words stating this topic's main point.`,
-              },
-              explanation: {
-                type: "string",
-                description: `A second complete sentence of ${minSentenceWords}–${maxSentenceWords} words explaining its source-supported context, constraint or consequence.`,
-              },
-            },
-            required: ["point", "explanation"],
+            properties: Object.fromEntries(
+              fields.map((field) => [
+                field,
+                {
+                  type: "string",
+                  description: `A complete ${minSentenceWords}–${maxSentenceWords} word sentence: ${field === "point" ? "state this topic's main point" : field === "explanation" ? "explain its source-supported context" : field === "detail" ? "explain a distinct source-supported detail or mechanism" : "preserve the source-supported condition, scope or caveat"}. Do not repeat the other sentences.`,
+                },
+              ]),
+            ),
+            required: fields,
             additionalProperties: false,
           };
         }
       }
     }
     const localPrompt = passages
-      ? `${prompt} For each text object, write BOTH a point sentence and an explanation sentence. Use the word ranges as drafting guidance, but always finish grammatical sentences. Never join words, truncate a thought, or add filler to hit a count. Explain using the evidence without inventing facts. Do not merely copy short source lines.`
+      ? `${prompt} For each text object, write every required sentence field. A four-field text needs point, explanation, detail and qualification sentences; a two-field text needs point and explanation. Use the word ranges as drafting guidance, but always finish grammatical sentences. Never join words, truncate a thought, or add filler to hit a count. Explain using the evidence without inventing facts. Do not merely copy short source lines.`
       : prompt;
     for (let attempt = 0; attempt < 3; attempt++) {
       interrupted(signal);
@@ -138,16 +152,27 @@ export function llamaScript(
           throw new Error();
         const parsed = JSON.parse(choice.message.content);
         if (passages) {
-          const sentence = z
-            .object({
-              point: z.string().min(1),
-              explanation: z.string().min(1),
-            })
-            .strict();
-          for (const value of Object.values(parsed) as { text?: unknown }[]) {
-            if (value === null || !("text" in value)) continue;
-            const text = sentence.parse(value.text);
-            value.text = `${text.point} ${text.explanation}`;
+          const properties = wireSchema.properties as Record<
+            string,
+            { properties?: { text?: { required?: string[] } } }
+          >;
+          for (const [key, value] of Object.entries(parsed) as [
+            string,
+            { text?: unknown } | null,
+          ][]) {
+            const fields = properties[key]?.properties?.text?.required;
+            if (!value || !fields) continue;
+            const sentence = z
+              .object(
+                Object.fromEntries(
+                  fields.map((field) => [field, z.string().min(1)]),
+                ),
+              )
+              .strict()
+              .parse(value.text);
+            value.text = fields
+              .map((field) => sentence[field]!.replace(/\s+/gu, " ").trim())
+              .join(" ");
           }
         }
         return schema.parse(parsed);
