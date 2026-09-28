@@ -317,3 +317,7 @@ One invocation accepts 1–10 sources totaling up to 2 MB of extracted text. Sou
 `pipelineConfig` resolves writer and speaker independently. Role-specific flags override `--provider`; explicit flags override environment defaults. Only active stages are instantiated and disclosed. Rendering ignores unused writing-model configuration; transcript-only work ignores unused speech settings. No additional speech vendor is introduced by this change.
 
 Long speech turns use bounded sentence segments while retaining the canonical transcript and speaker identity. Cache identity records the segmentation version. Five-minute evidence allows up to four distinct facts per category; exact repeated explanatory sentences fail before speech and share the existing one-correction budget. Debug mode may retain the structured draft for diagnosis.
+
+## TypeScript compiler compatibility
+
+Builds use TypeScript 7 through the `@typescript/native` npm alias. ESLint still requires the TypeScript 6 JavaScript API, supplied by the `typescript` alias to `@typescript/typescript6`. Keep both aliases: the native package supplies `tsc`, and the compatibility package supplies `tsc6`. This follows Microsoft’s [side-by-side migration guidance](https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/#running-side-by-side-with-typescript-6.0). Use `npm ci` without peer-dependency overrides.
