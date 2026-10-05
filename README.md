@@ -1,5 +1,7 @@
 # Plancast
 
+[![HOL Guard](https://img.shields.io/endpoint?url=https%3A%2F%2Fhol.org%2Fapi%2Fregistry%2Fbadges%2Fplugin%3Fslug%3Dsarthakdabhi%252Fplancast%26metric%3Dtrust)](https://hol.org/registry/plugins/sarthakdabhi%2Fplancast)
+
 [Website](https://sarthakdabhi.github.io/plancast/) · [Downloads](https://github.com/sarthakdabhi/plancast/releases)
 
 **Turn documents and public articles into two-person audio briefings—then listen at your own pace.**
